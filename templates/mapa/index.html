@@ -1565,7 +1565,14 @@
                 return;
             }
             compInfo.textContent = 'Carregando…';
+            const candInfo = compCandidatesList.find(c => c.key === key);
             await map.addConcorrenciaCandidate(key);
+            // Attach extra info (partido, cargo_label) to the candidate object
+            const added = (map._concCandidates || []).find(c => c.key === key);
+            if (added && candInfo) {
+                added.partido = candInfo.partido;
+                added.cargo_label = candInfo.cargo_label;
+            }
             renderCompChips();
             renderConcorrenciaLegend();
             updateCompInfo();
@@ -1586,15 +1593,21 @@
         const candidates = map._concCandidates || [];
         for (const cand of candidates) {
             const color = CONC_PALETTE_DARKS[cand.paletteIdx] || '#475569';
-            const chip = document.createElement('span');
-            chip.className = 'comp-chip';
-            chip.style.background = color;
-            const nameShort = cand.data.candidato.length > 22
-                ? cand.data.candidato.substring(0, 20) + '…'
-                : cand.data.candidato;
-            chip.innerHTML = `${nameShort} <span class="comp-chip-remove" data-key="${cand.key}">&times;</span>`;
-            compChips.appendChild(chip);
+            const card = document.createElement('div');
+            card.style.cssText = `background:${color};color:#fff;border-radius:8px;padding:8px 10px;font-size:.75rem;position:relative;min-width:120px;`;
+            const nome = cand.data.candidato;
+            const partido = cand.partido || '';
+            const cargo = cand.cargo_label || cand.data.cargo || '';
+            const votos = (cand.data.total_votos || 0).toLocaleString('pt-BR');
+            const cidades = cand.data.cidades_com_voto || 0;
+            card.innerHTML = `
+                <div style="font-weight:700;font-size:.8rem;margin-bottom:2px;">${nome} <span class="comp-chip-remove" data-key="${cand.key}" style="cursor:pointer;float:right;opacity:.7;font-size:1rem;line-height:1">&times;</span></div>
+                <div style="opacity:.85;font-size:.68rem;">${partido} · ${cargo}</div>
+                <div style="margin-top:4px;font-size:.7rem;">${votos} votos · ${cidades} cidades</div>
+            `;
+            compChips.appendChild(card);
         }
+        compChips.style.flexDirection = 'column';
         compChips.querySelectorAll('.comp-chip-remove').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -1624,13 +1637,7 @@
             compInfo.textContent = '';
             return;
         }
-        const parts = candidates.map(c => {
-            const color = CONC_PALETTE_DARKS[c.paletteIdx] || '#475569';
-            return `<span style="color:${color};font-weight:700">${c.data.total_votos.toLocaleString('pt-BR')}</span>`;
-        });
-        compInfo.innerHTML = candidates.length === 1
-            ? `${parts[0]} votos · ${candidates[0].data.cidades_com_voto} cidades`
-            : `${candidates.length} candidatos selecionados`;
+        compInfo.innerHTML = `${candidates.length} candidato${candidates.length > 1 ? 's' : ''} selecionado${candidates.length > 1 ? 's' : ''}`;
     }
 
     async function applyMode(mode) {

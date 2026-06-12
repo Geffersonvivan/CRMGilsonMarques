@@ -1118,7 +1118,30 @@ def dashboard(request):
         Q(ultima__lt=last_30) | Q(ultima__isnull=True)
     ).count()
 
+    # Resumo da Semana (o placar do ciclo de relacionamento)
+    contatos_alcancados_7d = (
+        InteracaoLog.objects.filter(data__gte=last_7, coordenador__isnull=False).values('coordenador').distinct().count()
+        + InteracaoLog.objects.filter(data__gte=last_7, cabo__isnull=False).values('cabo').distinct().count()
+        + InteracaoLog.objects.filter(data__gte=last_7, apoiador__isnull=False).values('apoiador').distinct().count()
+    )
+    fila_total = 0
+    for tipo, qs in (
+        ('coordenador', CoordenadorRegional.objects.all()),
+        ('cabo', CaboEleitoral.objects.all()),
+        ('apoiador', Apoiador.objects.all()),
+    ):
+        for c in qs.annotate(ultima=Max('interacoes__data')):
+            prazo = FREQ_PRAZOS.get(c.frequencia_relacionamento, 30)
+            dias = (now - c.ultima).days if c.ultima else None
+            if dias is None or dias > prazo:
+                fila_total += 1
+    from datetime import date
+    dias_eleicao = (date(2026, 10, 4) - now.date()).days
+
     return render(request, 'liderancas/dashboard.html', {
+        'contatos_alcancados_7d': contatos_alcancados_7d,
+        'fila_total': fila_total,
+        'dias_eleicao': dias_eleicao,
         'total_coord': total_coord,
         'total_cabos': total_cabos,
         'total_apoiadores': total_apoiadores,

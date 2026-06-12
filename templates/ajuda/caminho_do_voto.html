@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .cv-hero { text-align: center; max-width: 720px; margin: 0 auto 36px; }
+    .cv-hero h1 { font-size: 1.6rem; font-weight: 800; color: #002776; margin-bottom: 10px; }
+    .cv-hero p { font-size: 0.95rem; color: #475569; line-height: 1.6; }
+    .cv-lema {
+        display: inline-block; margin-top: 14px; padding: 10px 22px;
+        background: #eef4ff; border: 1px solid #c7d7f5; border-radius: 999px;
+        font-size: 0.85rem; font-weight: 700; color: #002776;
+    }
+
+    .cv-ciclo {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+        max-width: 1100px; margin: 0 auto 40px; align-items: stretch;
+    }
+    .cv-passo {
+        position: relative; background: #fff; border: 1px solid #e2e8f0;
+        border-radius: 16px; padding: 26px 22px 22px; margin: 0 14px;
+        text-decoration: none; transition: all 0.18s; display: flex;
+        flex-direction: column; gap: 10px;
+    }
+    .cv-passo:hover { border-color: #002776; transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,39,118,0.12); }
+    .cv-passo .num {
+        position: absolute; top: -16px; left: 22px; width: 34px; height: 34px;
+        background: #002776; color: #fff; border-radius: 50%; font-weight: 800;
+        display: flex; align-items: center; justify-content: center; font-size: 0.95rem;
+        border: 3px solid #f1f5f9;
+    }
+    .cv-passo .emoji { font-size: 1.6rem; }
+    .cv-passo h3 { font-size: 0.95rem; font-weight: 700; color: #0f172a; }
+    .cv-passo p { font-size: 0.8rem; color: #64748b; line-height: 1.5; flex: 1; }
+    .cv-passo .ir { font-size: 0.76rem; font-weight: 700; color: #002776; }
+    .cv-passo:not(:last-child)::after {
+        content: '→'; position: absolute; right: -24px; top: 50%;
+        transform: translateY(-50%); font-size: 1.3rem; color: #94a3b8; font-weight: 700;
+    }
+
+    .cv-secao { max-width: 880px; margin: 0 auto 28px; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 26px 30px; }
+    .cv-secao h2 { font-size: 1.05rem; font-weight: 800; color: #002776; margin-bottom: 14px; }
+    .cv-secao ul { list-style: none; padding: 0; }
+    .cv-secao li { font-size: 0.85rem; color: #374151; line-height: 1.7; padding-left: 26px; position: relative; margin-bottom: 8px; }
+    .cv-secao li::before { content: '✓'; position: absolute; left: 0; color: #16a34a; font-weight: 800; }
+    .cv-secao .dica { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px 16px; font-size: 0.82rem; color: #92400e; margin-top: 12px; }
+
+    .cv-tours { display: flex; gap: 10px; flex-wrap: wrap; }
+    .cv-tour-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 9px 16px; border: 1px solid #c7d7f5; border-radius: 10px;
+        background: #fff; color: #002776; font-size: 0.8rem; font-weight: 600;
+        text-decoration: none; transition: all 0.15s;
+    }
+    .cv-tour-btn:hover { background: #002776; color: #fff; }
+
+    @media (max-width: 980px) {
+        .cv-ciclo { grid-template-columns: 1fr 1fr; gap: 24px 0; }
+        .cv-passo:not(:last-child)::after { display: none; }
+    }
+    @media (max-width: 560px) { .cv-ciclo { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="cv-hero">
+    <h1>🗳️ O Caminho do Voto</h1>
+    <p>
+        O ouro deste CRM não está em nenhuma tela isolada — está no <strong>ciclo</strong>.
+        Contatos dizem <strong>quem</strong> visitar, a Agenda diz <strong>quando</strong>,
+        o Roteiro diz <strong>em que ordem</strong> — e cada visita realizada realimenta o sistema sozinha.
+    </p>
+    <div class="cv-lema">Ninguém precisa lembrar de ninguém — o sistema lembra por você.</div>
+</div>
+
+<div class="cv-ciclo">
+    <a class="cv-passo" href="{% url 'liderancas:fila_relacionamento' %}">
+        <span class="num">1</span>
+        <span class="emoji">⏰</span>
+        <h3>A Fila avisa</h3>
+        <p>A <strong>Fila de Relacionamento</strong> cruza a frequência combinada com cada contato (semanal, quinzenal, mensal) e mostra quem está esquecido — o mais urgente no topo.</p>
+        <span class="ir">Abrir a Fila →</span>
+    </a>
+    <a class="cv-passo" href="{% url 'agenda:compromisso_list' %}">
+        <span class="num">2</span>
+        <span class="emoji">📅</span>
+        <h3>Você agenda</h3>
+        <p>Na Fila ou em qualquer lista, clique em <strong>Agendar visita</strong>: o compromisso nasce pronto, com cidade e contato já vinculados como participante.</p>
+        <span class="ir">Abrir a Agenda →</span>
+    </a>
+    <a class="cv-passo" href="{% url 'agenda:roteiro_list' %}">
+        <span class="num">3</span>
+        <span class="emoji">🗺️</span>
+        <h3>O Roteiro desenha</h3>
+        <p>Agrupe os compromissos do dia num <strong>Roteiro</strong>: veja o trajeto no mapa, otimize a ordem das paradas e receba sugestões de onde você é mais necessário.</p>
+        <span class="ir">Abrir Roteiros →</span>
+    </a>
+    <a class="cv-passo" href="{% url 'agenda:compromisso_list' %}">
+        <span class="num">4</span>
+        <span class="emoji">✨</span>
+        <h3>O sistema anota</h3>
+        <p>Visitou? Marque o compromisso como <strong>Realizado</strong>. As interações são registradas automaticamente para todos os participantes — e eles saem da Fila.</p>
+        <span class="ir">E o ciclo recomeça ↻</span>
+    </a>
+</div>
+
+<div class="cv-secao">
+    <h2>Detalhes que fazem diferença</h2>
+    <ul>
+        <li><strong>Badges de atraso</strong>: "Nunca" (vermelho) e "45d" (laranja) aparecem ao lado dos contatos no painel de participantes — priorize-os ao montar a agenda.</li>
+        <li><strong>⭐ Prioridade alta</strong>: contatos marcados como prioridade alta sobem para o topo de todas as sugestões.</li>
+        <li><strong>Frequência de relacionamento</strong>: configure no cadastro do contato (semanal = 7 dias, quinzenal = 15, mensal = 30, eventual = 90). É ela que alimenta a Fila.</li>
+        <li><strong>Otimizar ordem</strong> (no roteiro): reordena as paradas pelo trajeto mais curto entre as cidades. Revise os horários depois.</li>
+        <li><strong>Sugestões do roteiro</strong>: cidades da região rankeadas por contatos vencidos — "+ Compromisso aqui" já cria na data do roteiro.</li>
+        <li><strong>WhatsApp em um clique</strong>: o telefone de qualquer contato, em qualquer tela, abre direto a conversa.</li>
+    </ul>
+    <div class="dica">
+        💡 <strong>Rotina sugerida para a equipe:</strong> segunda-feira, abrir a Fila e agendar a semana.
+        Sexta-feira, conferir no Painel quantos contatos saíram da fila. O placar é esse.
+    </div>
+</div>
+
+<div class="cv-secao">
+    <h2>Tours guiados</h2>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:14px;">Reveja o passo a passo iluminado em cada tela:</p>
+    <div class="cv-tours">
+        <a class="cv-tour-btn" href="{% url 'liderancas:fila_relacionamento' %}?tour=1">⏰ Tour da Fila</a>
+        <a class="cv-tour-btn" href="{% url 'agenda:compromisso_list' %}?tour=1">📅 Tour da Agenda</a>
+        <a class="cv-tour-btn" href="{% url 'agenda:roteiro_list' %}?tour=1">🗺️ Tour dos Roteiros</a>
+    </div>
+</div>
+
+{% endblock %}

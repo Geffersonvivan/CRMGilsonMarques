@@ -325,6 +325,31 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
 .form-modal-errors ul { list-style: none; margin: 0; padding: 0; }
 @media (max-width: 640px) { .form-modal-body .form-grid { grid-template-columns: 1fr !important; } }
 
+/* ---------- Onboarding (banners de 1ª visita + toast de aprendizado) ---------- */
+.onb-banner {
+    display: none; position: relative; align-items: flex-start; gap: 12px;
+    background: linear-gradient(135deg, #eef4ff, #f8fafc);
+    border: 1px solid #c7d7f5; border-radius: 12px;
+    padding: 14px 44px 14px 18px; margin-bottom: 14px;
+    font-size: 0.84rem; color: #1e3a8a; line-height: 1.55;
+}
+.onb-banner.onb-visible { display: flex; }
+.onb-banner strong { color: #002776; }
+.onb-banner .onb-emoji { font-size: 1.3rem; flex-shrink: 0; }
+.onb-banner a { color: #002776; font-weight: 700; }
+.onb-close {
+    position: absolute; top: 8px; right: 10px; border: none; background: none;
+    font-size: 1.1rem; color: #64748b; cursor: pointer; padding: 2px 6px; border-radius: 6px;
+}
+.onb-close:hover { background: #dbeafe; color: #002776; }
+.learn-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 20px);
+    background: #0f172a; color: #fff; padding: 13px 22px; border-radius: 12px;
+    font-size: 0.84rem; box-shadow: 0 12px 32px rgba(0,0,0,0.3); z-index: 9999;
+    opacity: 0; transition: all 0.35s cubic-bezier(0.16,1,0.3,1); max-width: 480px; text-align: center;
+}
+.learn-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
 /* ---------- Messages / Toasts ---------- */
 .msg-toast {
     padding: 12px 20px; border-radius: 12px; font-size: 0.85rem;

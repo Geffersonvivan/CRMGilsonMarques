@@ -192,6 +192,19 @@
         {% endif %}
 
         {% if user.perfil == 'admin' or user.is_superuser or 'config' in user.secoes_permitidas %}
+        <div class="sidebar-item" data-section="ajuda">
+            <a href="{% url 'ajuda' %}" class="sidebar-icon" title="Como funciona" style="text-decoration:none;">
+                <span class="icon-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                </span>
+                <span class="sidebar-label">Como funciona</span>
+            </a>
+        </div>
+
         <span class="sidebar-section">Admin</span>
 
         <div class="sidebar-item" data-section="config">
@@ -290,6 +303,7 @@
     setInterval(tick, 1000);
 })();
 </script>
+<script src="/static/js/onboarding.js"></script>
 <script src="/static/js/liderancas-common.js"></script>
 <script src="/static/js/form-modal.js"></script>
 {% block extra_js %}{% endblock %}

@@ -2,6 +2,20 @@
 
 {% block extra_css %}
 <style>
+    .semana-hero {
+        display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+        background: linear-gradient(120deg, #002776 0%, #0a3d91 60%, #1456b8 100%);
+        border-radius: 16px; padding: 20px 30px; margin-bottom: 20px;
+        color: #fff; box-shadow: 0 10px 30px rgba(0,39,118,0.25);
+    }
+    .semana-item { display: flex; flex-direction: column; gap: 2px; }
+    .semana-num { font-size: 1.7rem; font-weight: 800; line-height: 1; }
+    .semana-num.semana-alerta { color: #fca5a5; }
+    .semana-lbl { font-size: 0.72rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.4px; }
+    .semana-cta { font-size: 0.74rem; font-weight: 700; color: #93c5fd; text-decoration: none; margin-top: 3px; }
+    .semana-cta:hover { color: #fff; }
+    .semana-sep { width: 1px; height: 44px; background: rgba(255,255,255,0.2); }
+
     .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .stat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; text-align: center; }
     .stat-value { font-size: 2rem; font-weight: 800; color: #002776; }
@@ -28,6 +42,29 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">Painel Lideranças</h1>
+</div>
+
+<div class="semana-hero">
+    <div class="semana-item">
+        <span class="semana-num">{{ interacoes_7d }}</span>
+        <span class="semana-lbl">interações na semana</span>
+    </div>
+    <div class="semana-sep"></div>
+    <div class="semana-item">
+        <span class="semana-num">{{ contatos_alcancados_7d }}</span>
+        <span class="semana-lbl">contatos alcançados</span>
+    </div>
+    <div class="semana-sep"></div>
+    <div class="semana-item">
+        <span class="semana-num semana-alerta">{{ fila_total }}</span>
+        <span class="semana-lbl">na fila de relacionamento</span>
+        <a href="{% url 'liderancas:fila_relacionamento' %}" class="semana-cta">Ver fila →</a>
+    </div>
+    <div class="semana-sep"></div>
+    <div class="semana-item">
+        <span class="semana-num">{{ dias_eleicao }}</span>
+        <span class="semana-lbl">dias para a eleição</span>
+    </div>
 </div>
 
 <div class="dash-grid">

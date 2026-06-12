@@ -1,6 +1,6 @@
 import re
 from django import forms
-from .models import CoordenadorRegional, CaboEleitoral, Apoiador, Voluntario, Cidade, Regiao, InteracaoLog
+from .models import CoordenadorRegional, CaboEleitoral, Apoiador, Voluntario, Cidade, Regiao, InteracaoLog, Egresso, Lassberg
 
 
 class DuplicateCheckMixin:
@@ -36,6 +36,8 @@ class CoordenadorRegionalForm(DuplicateCheckMixin, forms.ModelForm):
         label='Região',
         widget=forms.Select(attrs={'class': 'form-input', 'id': 'id_regiao'}),
     )
+
+    field_order = ['nome', 'telefone', 'email', 'regiao', 'cidade_base', 'instagram', 'prioridade', 'frequencia_relacionamento', 'observacoes']
 
     class Meta:
         model = CoordenadorRegional
@@ -95,6 +97,8 @@ class CaboEleitoralForm(DuplicateCheckMixin, forms.ModelForm):
         label='Região',
         widget=forms.Select(attrs={'class': 'form-input', 'id': 'id_regiao'}),
     )
+
+    field_order = ['nome', 'telefone', 'email', 'regiao', 'cidade', 'instagram', 'prioridade', 'frequencia_relacionamento', 'observacoes']
 
     class Meta:
         model = CaboEleitoral
@@ -158,11 +162,13 @@ class ApoiadorForm(DuplicateCheckMixin, forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-input', 'id': 'id_regiao'}),
     )
 
+    field_order = ['nome', 'telefone', 'email', 'regiao', 'cidade', 'tipo', 'cargo', 'origem_contato', 'instagram', 'prioridade', 'grau_influencia', 'frequencia_relacionamento', 'status', 'observacoes']
+
     class Meta:
         model = Apoiador
         fields = [
             'nome', 'telefone', 'email', 'cidade',
-            'tipo', 'origem_contato', 'instagram',
+            'tipo', 'cargo', 'origem_contato', 'instagram',
             'prioridade', 'grau_influencia',
             'frequencia_relacionamento',
             'status', 'observacoes',
@@ -173,6 +179,7 @@ class ApoiadorForm(DuplicateCheckMixin, forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-input'}),
             'cidade': forms.Select(attrs={'class': 'form-input', 'id': 'id_cidade'}),
             'tipo': forms.Select(attrs={'class': 'form-input'}),
+            'cargo': forms.Select(attrs={'class': 'form-input'}),
             'origem_contato': forms.TextInput(attrs={'class': 'form-input'}),
             'instagram': forms.TextInput(attrs={'class': 'form-input', 'placeholder': '@usuario'}),
             'prioridade': forms.Select(attrs={'class': 'form-input'}),
@@ -286,6 +293,72 @@ class VoluntarioForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class EgressoForm(DuplicateCheckMixin, forms.ModelForm):
+    class Meta:
+        model = Egresso
+        fields = [
+            'nome', 'telefone', 'email', 'instagram',
+            'estado', 'cidade_nome', 'cidade',
+            'curso', 'instituicao', 'situacao_curso',
+            'observacoes',
+        ]
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-input'}),
+            'telefone': forms.TextInput(attrs={'class': 'form-input', 'placeholder': '(00) 00000-0000'}),
+            'email': forms.EmailInput(attrs={'class': 'form-input'}),
+            'instagram': forms.TextInput(attrs={'class': 'form-input', 'placeholder': '@usuario'}),
+            'estado': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'SC', 'maxlength': '2', 'style': 'text-transform:uppercase;'}),
+            'cidade_nome': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Nome da cidade'}),
+            'cidade': forms.Select(attrs={'class': 'form-input'}),
+            'curso': forms.TextInput(attrs={'class': 'form-input'}),
+            'instituicao': forms.TextInput(attrs={'class': 'form-input'}),
+            'situacao_curso': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Formado'}),
+            'observacoes': forms.Textarea(attrs={'class': 'form-input', 'rows': 4}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['cidade'].queryset = Cidade.objects.order_by('nome')
+        self.fields['cidade'].required = False
+
+    def clean(self):
+        super().clean()
+        self._check_duplicates(Egresso)
+        estado = self.cleaned_data.get('estado', '')
+        if estado:
+            self.cleaned_data['estado'] = estado.upper()
+        return self.cleaned_data
+
+
+class LassbergForm(DuplicateCheckMixin, forms.ModelForm):
+    class Meta:
+        model = Lassberg
+        fields = [
+            'nome', 'telefone', 'email',
+            'estado', 'cidade_nome', 'cidade',
+            'observacoes',
+        ]
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-input'}),
+            'telefone': forms.TextInput(attrs={'class': 'form-input', 'placeholder': '(00) 00000-0000'}),
+            'email': forms.EmailInput(attrs={'class': 'form-input'}),
+            'estado': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Santa Catarina'}),
+            'cidade_nome': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Nome da cidade'}),
+            'cidade': forms.Select(attrs={'class': 'form-input'}),
+            'observacoes': forms.Textarea(attrs={'class': 'form-input', 'rows': 4}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['cidade'].queryset = Cidade.objects.order_by('nome')
+        self.fields['cidade'].required = False
+
+    def clean(self):
+        super().clean()
+        self._check_duplicates(Lassberg)
+        return self.cleaned_data
 
 
 class InteracaoLogForm(forms.ModelForm):

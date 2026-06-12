@@ -1,34 +1,67 @@
-{% if page_obj.paginator.num_pages > 1 %}
-<div class="pagination-info">
-    Exibindo {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ total }}
-</div>
-<div class="pagination">
-    {% if page_obj.has_previous %}
-    <a href="?{{ query_string }}&page=1">&laquo;</a>
-    <a href="?{{ query_string }}&page={{ page_obj.previous_page_number }}">&lsaquo;</a>
-    {% else %}
-    <span class="disabled">&laquo;</span>
-    <span class="disabled">&lsaquo;</span>
-    {% endif %}
+{% with pp=request.GET.per_page|default:'50' %}
+<div class="pagination-bar">
+    <span class="pagination-text">
+        Exibindo <strong>{{ page_obj.start_index }}&ndash;{{ page_obj.end_index }}</strong> de <strong>{{ total }}</strong>
+    </span>
+    <div class="pagination-controls">
+        <label class="pagination-pp">
+            <select onchange="paginationPerPage(this)">
+                <option value="25" {% if pp == '25' %}selected{% endif %}>25</option>
+                <option value="50" {% if pp == '50' %}selected{% endif %}>50</option>
+                <option value="100" {% if pp == '100' %}selected{% endif %}>100</option>
+                <option value="200" {% if pp == '200' %}selected{% endif %}>200</option>
+            </select>
+            por página
+        </label>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="pagination-pages">
+            {% if page_obj.paginator.num_pages > 3 %}
+                {% if page_obj.has_previous %}
+                <a href="?{{ query_string }}&page=1" title="Primeira">&laquo;</a>
+                {% else %}
+                <span class="disabled">&laquo;</span>
+                {% endif %}
+            {% endif %}
+            {% if page_obj.has_previous %}
+            <a href="?{{ query_string }}&page={{ page_obj.previous_page_number }}" title="Anterior">&lsaquo;</a>
+            {% else %}
+            <span class="disabled">&lsaquo;</span>
+            {% endif %}
 
-    {% for num in page_obj.paginator.page_range %}
-        {% if page_obj.number == num %}
-        <span class="current">{{ num }}</span>
-        {% elif num > page_obj.number|add:"-4" and num < page_obj.number|add:"4" %}
-        <a href="?{{ query_string }}&page={{ num }}">{{ num }}</a>
-        {% elif num == 1 or num == page_obj.paginator.num_pages %}
-        <a href="?{{ query_string }}&page={{ num }}">{{ num }}</a>
-        {% elif num == page_obj.number|add:"-4" or num == page_obj.number|add:"4" %}
-        <span class="disabled">...</span>
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <span class="current">{{ num }}</span>
+                {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                <a href="?{{ query_string }}&page={{ num }}">{{ num }}</a>
+                {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                <a href="?{{ query_string }}&page={{ num }}">{{ num }}</a>
+                {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
+                <span class="ellipsis">&hellip;</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <a href="?{{ query_string }}&page={{ page_obj.next_page_number }}" title="Próxima">&rsaquo;</a>
+            {% else %}
+            <span class="disabled">&rsaquo;</span>
+            {% endif %}
+            {% if page_obj.paginator.num_pages > 3 %}
+                {% if page_obj.has_next %}
+                <a href="?{{ query_string }}&page={{ page_obj.paginator.num_pages }}" title="Última">&raquo;</a>
+                {% else %}
+                <span class="disabled">&raquo;</span>
+                {% endif %}
+            {% endif %}
+        </div>
         {% endif %}
-    {% endfor %}
-
-    {% if page_obj.has_next %}
-    <a href="?{{ query_string }}&page={{ page_obj.next_page_number }}">&rsaquo;</a>
-    <a href="?{{ query_string }}&page={{ page_obj.paginator.num_pages }}">&raquo;</a>
-    {% else %}
-    <span class="disabled">&rsaquo;</span>
-    <span class="disabled">&raquo;</span>
-    {% endif %}
+    </div>
 </div>
-{% endif %}
+<script>
+function paginationPerPage(sel) {
+    var p = new URLSearchParams(window.location.search);
+    p.set('per_page', sel.value);
+    p.delete('page');
+    window.location.search = p.toString();
+}
+</script>
+{% endwith %}

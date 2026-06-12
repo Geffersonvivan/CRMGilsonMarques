@@ -29,7 +29,7 @@
 <div class="page-header">
     <h1 class="page-title" data-tip="Voluntários cadastrados via PWA para atividades de mobilização como panfletagem, carreata, boca de urna, etc.">Mobilização <span class="page-subtitle">{{ total }} voluntários</span></h1>
     <div style="display:flex;gap:8px;">
-        <a href="{% url 'liderancas:mobilizacao_create' %}" class="btn btn-primary">
+        <a href="{% url 'liderancas:mobilizacao_create' %}" class="btn btn-primary" onclick="return openFormModal(this.href, 'Novo Voluntário')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Voluntário
         </a>
@@ -120,7 +120,7 @@
                 <td>{{ v.created_at|date:"d/m/Y" }}</td>
                 <td>
                     <div class="actions">
-                        <a href="{% url 'liderancas:mobilizacao_edit' v.pk %}" class="btn btn-primary btn-sm">Editar</a>
+                        <a href="{% url 'liderancas:mobilizacao_edit' v.pk %}" class="btn btn-primary btn-sm" onclick="return openFormModal(this.href, 'Editar Voluntário')">Editar</a>
                         <form method="post" action="{% url 'liderancas:mobilizacao_delete' v.pk %}" onsubmit="return confirm('Remover este voluntário?')">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-danger btn-sm">Excluir</button>

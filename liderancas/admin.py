@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Regiao, Cidade, CoordenadorRegional, CaboEleitoral, Apoiador, InteracaoLog
+from .models import Regiao, Cidade, CoordenadorRegional, CaboEleitoral, Apoiador, InteracaoLog, Egresso, Lassberg
 
 
 @admin.register(Regiao)
@@ -37,9 +37,27 @@ class CaboEleitoralAdmin(admin.ModelAdmin):
 
 @admin.register(Apoiador)
 class ApoiadorAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'telefone', 'email', 'cidade', 'tipo', 'status', 'prioridade', 'grau_influencia', 'is_active', 'created_at']
+    list_display = ['nome', 'telefone', 'email', 'cidade', 'tipo', 'cargo', 'status', 'prioridade', 'grau_influencia', 'is_active', 'created_at']
     search_fields = ['nome', 'telefone', 'email']
-    list_filter = ['tipo', 'status', 'prioridade', 'grau_influencia', 'cidade__regiao', 'is_active']
+    list_filter = ['tipo', 'cargo', 'status', 'prioridade', 'grau_influencia', 'cidade__regiao', 'is_active']
+    raw_id_fields = ['cidade']
+    ordering = ['nome']
+
+
+@admin.register(Egresso)
+class EgressoAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'telefone', 'email', 'cidade_nome', 'estado', 'curso', 'instituicao', 'is_active', 'created_at']
+    search_fields = ['nome', 'telefone', 'email', 'cidade_nome', 'curso']
+    list_filter = ['estado', 'instituicao', 'is_active']
+    raw_id_fields = ['cidade']
+    ordering = ['nome']
+
+
+@admin.register(Lassberg)
+class LassbergAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'telefone', 'cidade_nome', 'estado', 'is_active', 'created_at']
+    search_fields = ['nome', 'telefone', 'cidade_nome']
+    list_filter = ['estado', 'is_active']
     raw_id_fields = ['cidade']
     ordering = ['nome']
 

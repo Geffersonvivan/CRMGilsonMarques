@@ -33,54 +33,39 @@
                 {{ form.email.errors }}
             </div>
             <div class="form-group">
-                <label for="id_regiao">Região *</label>
-                {{ form.regiao }}
-                {{ form.regiao.errors }}
-            </div>
-            <div class="form-group">
-                <label for="id_cidade">Cidade *</label>
-                {{ form.cidade }}
-                {{ form.cidade.errors }}
-            </div>
-            <div class="form-group">
-                <label for="id_tipo">Tipo de Contato *</label>
-                {{ form.tipo }}
-                {{ form.tipo.errors }}
-            </div>
-            <div class="form-group">
-                <label for="id_cargo">Cargo Político</label>
-                {{ form.cargo }}
-                {{ form.cargo.errors }}
-            </div>
-            <div class="form-group">
-                <label for="id_origem_contato">Origem do Contato</label>
-                {{ form.origem_contato }}
-                {{ form.origem_contato.errors }}
-            </div>
-            <div class="form-group">
-                <label for="id_instagram">Instagram</label>
+                <label for="id_instagram">Redes Sociais</label>
                 {{ form.instagram }}
                 {{ form.instagram.errors }}
             </div>
             <div class="form-group">
-                <label for="id_prioridade">Prioridade Comunicação *</label>
-                {{ form.prioridade }}
-                {{ form.prioridade.errors }}
+                <label for="id_estado">Estado (UF)</label>
+                {{ form.estado }}
+                {{ form.estado.errors }}
             </div>
             <div class="form-group">
-                <label for="id_grau_influencia">Grau de Influência</label>
-                {{ form.grau_influencia }}
-                {{ form.grau_influencia.errors }}
+                <label for="id_cidade_nome">Cidade</label>
+                {{ form.cidade_nome }}
+                {{ form.cidade_nome.errors }}
             </div>
             <div class="form-group">
-                <label for="id_frequencia_relacionamento">Frequência de Relacionamento</label>
-                {{ form.frequencia_relacionamento }}
-                {{ form.frequencia_relacionamento.errors }}
+                <label for="id_cidade">Cidade (SC, para mapa/região)</label>
+                {{ form.cidade }}
+                {{ form.cidade.errors }}
             </div>
             <div class="form-group">
-                <label for="id_status">Status</label>
-                {{ form.status }}
-                {{ form.status.errors }}
+                <label for="id_curso">Curso</label>
+                {{ form.curso }}
+                {{ form.curso.errors }}
+            </div>
+            <div class="form-group">
+                <label for="id_instituicao">Instituição</label>
+                {{ form.instituicao }}
+                {{ form.instituicao.errors }}
+            </div>
+            <div class="form-group">
+                <label for="id_situacao_curso">Situação do Curso</label>
+                {{ form.situacao_curso }}
+                {{ form.situacao_curso.errors }}
             </div>
             <div class="form-group full">
                 <label for="id_observacoes">Observações</label>
@@ -90,7 +75,7 @@
         </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Salvar{% else %}Cadastrar{% endif %}</button>
-            <a href="{% url 'liderancas:apoiador_list' %}" class="btn btn-secondary">Cancelar</a>
+            <a href="{% url 'liderancas:egresso_list' %}" class="btn btn-secondary">Cancelar</a>
         </div>
     </form>
 </div>
@@ -101,7 +86,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     LiderancasCommon.initPhoneMask();
-    LiderancasCommon.initCityLoader();
 });
 </script>
 {% endblock %}

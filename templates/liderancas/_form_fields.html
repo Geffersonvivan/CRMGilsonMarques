@@ -1,0 +1,15 @@
+<form method="post" id="formModalForm" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="form-modal-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <div class="form-grid">
+        {% for field in form.visible_fields %}
+        <div class="form-group{% if field.name == 'observacoes' or field.name == 'endereco' or field.name == 'disponibilidades' %} full{% endif %}">
+            <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+            {{ field }}
+            {{ field.errors }}
+        </div>
+        {% endfor %}
+    </div>
+</form>

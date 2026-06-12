@@ -25,6 +25,18 @@ urlpatterns = [
     path('apoiadores/<int:pk>/editar/', views.apoiador_edit, name='apoiador_edit'),
     path('apoiadores/<int:pk>/excluir/', views.apoiador_delete, name='apoiador_delete'),
 
+    # Egressos
+    path('egressos/', views.egresso_list, name='egresso_list'),
+    path('egressos/novo/', views.egresso_create, name='egresso_create'),
+    path('egressos/<int:pk>/editar/', views.egresso_edit, name='egresso_edit'),
+    path('egressos/<int:pk>/excluir/', views.egresso_delete, name='egresso_delete'),
+
+    # Lassberg
+    path('lassberg/', views.lassberg_list, name='lassberg_list'),
+    path('lassberg/novo/', views.lassberg_create, name='lassberg_create'),
+    path('lassberg/<int:pk>/editar/', views.lassberg_edit, name='lassberg_edit'),
+    path('lassberg/<int:pk>/excluir/', views.lassberg_delete, name='lassberg_delete'),
+
     # Mobilização
     path('mobilizacao/', views.mobilizacao_list, name='mobilizacao_list'),
     path('mobilizacao/novo/', views.mobilizacao_create, name='mobilizacao_create'),

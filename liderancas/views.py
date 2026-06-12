@@ -7,9 +7,10 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Max, Count
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
+from core.views import api_cidades as core_api_cidades
 from usuarios.views import admin_required, secao_required
-from .models import CoordenadorRegional, CaboEleitoral, Apoiador, Voluntario, Regiao, Cidade, InteracaoLog
-from .forms import CoordenadorRegionalForm, CaboEleitoralForm, ApoiadorForm, VoluntarioForm, InteracaoLogForm
+from .models import CoordenadorRegional, CaboEleitoral, Apoiador, Voluntario, Regiao, Cidade, InteracaoLog, Egresso, Lassberg
+from .forms import CoordenadorRegionalForm, CaboEleitoralForm, ApoiadorForm, VoluntarioForm, InteracaoLogForm, EgressoForm, LassbergForm
 
 
 def login_required_view(view_func):
@@ -19,6 +20,25 @@ def login_required_view(view_func):
             return redirect('login')
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+PER_PAGE_OPTIONS = [25, 50, 100, 200]
+
+
+def _paginate(request, queryset, default=50):
+    """Pagina respeitando o parâmetro ?per_page= (25/50/100/200)."""
+    try:
+        per_page = int(request.GET.get('per_page', default))
+    except (TypeError, ValueError):
+        per_page = default
+    if per_page not in PER_PAGE_OPTIONS:
+        per_page = default
+    paginator = Paginator(queryset, per_page)
+    return paginator, paginator.get_page(request.GET.get('page'))
+
+
+def _ajax(request):
+    return request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
 
 def _apply_sorting(request, queryset, allowed_fields):
@@ -69,8 +89,7 @@ def coordenador_list(request):
             writer.writerow([c.nome, c.telefone, c.email, c.regiao.sigla, c.cidade_base.nome, c.instagram, c.get_prioridade_display(), c.get_frequencia_relacionamento_display(), c.observacoes])
         return response
 
-    paginator = Paginator(coordenadores, 50)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    paginator, page_obj = _paginate(request, coordenadores)
 
     qs_params = request.GET.copy()
     qs_params.pop('page', None)
@@ -97,9 +116,13 @@ def coordenador_create(request):
             coord.cadastrado_por = request.user
             coord.save()
             messages.success(request, 'Coordenador Regional cadastrado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
             return redirect('liderancas:coordenador_list')
     else:
         form = CoordenadorRegionalForm()
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
     return render(request, 'liderancas/coordenador_form.html', {
         'form': form,
         'titulo': 'Novo Coordenador Regional',
@@ -116,9 +139,13 @@ def coordenador_edit(request, pk):
             obj.atualizado_por = request.user
             obj.save()
             messages.success(request, 'Coordenador Regional atualizado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
             return redirect('liderancas:coordenador_list')
     else:
         form = CoordenadorRegionalForm(instance=coord)
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
     return render(request, 'liderancas/coordenador_form.html', {
         'form': form,
         'titulo': f'Editar: {coord}',
@@ -173,8 +200,7 @@ def cabo_list(request):
             writer.writerow([c.nome, c.telefone, c.email, c.cidade.nome, c.cidade.regiao.sigla, c.coordenador.nome if c.coordenador else '', c.instagram, c.get_prioridade_display(), c.get_frequencia_relacionamento_display(), c.observacoes])
         return response
 
-    paginator = Paginator(cabos, 50)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    paginator, page_obj = _paginate(request, cabos)
 
     cidades_filtro = []
     if regiao_id:
@@ -207,9 +233,13 @@ def cabo_create(request):
             cabo.cadastrado_por = request.user
             cabo.save()
             messages.success(request, 'Cabo Eleitoral cadastrado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
             return redirect('liderancas:cabo_list')
     else:
         form = CaboEleitoralForm()
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
     return render(request, 'liderancas/cabo_form.html', {
         'form': form,
         'titulo': 'Novo Cabo Eleitoral',
@@ -226,9 +256,13 @@ def cabo_edit(request, pk):
             obj.atualizado_por = request.user
             obj.save()
             messages.success(request, 'Cabo Eleitoral atualizado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
             return redirect('liderancas:cabo_list')
     else:
         form = CaboEleitoralForm(instance=cabo)
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
     return render(request, 'liderancas/cabo_form.html', {
         'form': form,
         'titulo': f'Editar: {cabo}',
@@ -271,6 +305,7 @@ def apoiador_list(request):
     prioridade = request.GET.get('prioridade', '')
     status = request.GET.get('status', '')
     grau = request.GET.get('grau', '')
+    cargo = request.GET.get('cargo', '')
 
     if busca:
         apoiadores = apoiadores.filter(
@@ -280,6 +315,8 @@ def apoiador_list(request):
         )
     if tipo:
         apoiadores = apoiadores.filter(tipo=tipo)
+    if cargo:
+        apoiadores = apoiadores.filter(cargo=cargo)
     if regiao_id:
         apoiadores = apoiadores.filter(cidade__regiao_id=regiao_id)
     if cidade_id:
@@ -292,7 +329,7 @@ def apoiador_list(request):
         apoiadores = apoiadores.filter(grau_influencia=grau)
 
     apoiadores, current_sort, current_dir = _apply_sorting(
-        request, apoiadores, ['nome', 'cidade__nome', 'cidade__regiao__sigla', 'tipo', 'prioridade', 'grau_influencia', 'status', 'created_at']
+        request, apoiadores, ['nome', 'cidade__nome', 'cidade__regiao__sigla', 'tipo', 'cargo', 'prioridade', 'grau_influencia', 'status', 'created_at']
     )
 
     # CSV Export
@@ -301,13 +338,12 @@ def apoiador_list(request):
         response['Content-Disposition'] = 'attachment; filename="apoiadores.csv"'
         response.charset = 'utf-8-sig'
         writer = csv.writer(response)
-        writer.writerow(['Nome', 'Telefone', 'Email', 'Cidade', 'Região', 'Tipo', 'Origem', 'Instagram', 'Prioridade', 'Influência', 'Frequência', 'Status', 'Observações'])
+        writer.writerow(['Nome', 'Telefone', 'Email', 'Cidade', 'Região', 'Tipo', 'Cargo', 'Origem', 'Instagram', 'Prioridade', 'Influência', 'Frequência', 'Status', 'Observações'])
         for a in apoiadores:
-            writer.writerow([a.nome, a.telefone, a.email, a.cidade.nome, a.cidade.regiao.sigla, a.get_tipo_display(), a.origem_contato, a.instagram, a.get_prioridade_display(), a.get_grau_influencia_display(), a.get_frequencia_relacionamento_display(), a.get_status_display(), a.observacoes])
+            writer.writerow([a.nome, a.telefone, a.email, a.cidade.nome, a.cidade.regiao.sigla, a.get_tipo_display(), a.get_cargo_display(), a.origem_contato, a.instagram, a.get_prioridade_display(), a.get_grau_influencia_display(), a.get_frequencia_relacionamento_display(), a.get_status_display(), a.observacoes])
         return response
 
-    paginator = Paginator(apoiadores, 50)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    paginator, page_obj = _paginate(request, apoiadores)
 
     # Cidades filtradas por região (para o select de cidade)
     cidades_filtro = []
@@ -322,11 +358,13 @@ def apoiador_list(request):
     return render(request, 'liderancas/apoiador_list.html', {
         'page_obj': page_obj,
         'tipo_choices': Apoiador.TIPO_CHOICES,
+        'cargo_choices': Apoiador.CARGO_CHOICES,
         'prioridade_choices': Apoiador.PRIORIDADE_CHOICES,
         'regioes': Regiao.objects.all().order_by('sigla'),
         'cidades_filtro': cidades_filtro,
         'busca': busca,
         'tipo_filtro': tipo,
+        'cargo_filtro': cargo,
         'regiao_filtro': regiao_id,
         'cidade_filtro': cidade_id,
         'prioridade_filtro': prioridade,
@@ -348,9 +386,13 @@ def apoiador_create(request):
             apoiador.cadastrado_por = request.user
             apoiador.save()
             messages.success(request, 'Apoiador cadastrado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
             return redirect('liderancas:apoiador_list')
     else:
         form = ApoiadorForm(user=request.user)
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
     return render(request, 'liderancas/apoiador_form.html', {
         'form': form,
         'titulo': 'Novo Apoiador',
@@ -372,9 +414,13 @@ def apoiador_edit(request, pk):
             apoiador.atualizado_por = request.user
             apoiador.save()
             messages.success(request, 'Apoiador atualizado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
             return redirect('liderancas:apoiador_list')
     else:
         form = ApoiadorForm(instance=apoiador, user=request.user)
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
     return render(request, 'liderancas/apoiador_form.html', {
         'form': form,
         'titulo': f'Editar: {apoiador}',
@@ -393,6 +439,259 @@ def apoiador_delete(request, pk):
         apoiador.soft_delete(user=request.user)
         messages.success(request, 'Apoiador removido com sucesso.')
     return redirect('liderancas:apoiador_list')
+
+
+# ==================== EGRESSOS ====================
+
+@secao_required('liderancas:egressos')
+def egresso_list(request):
+    egressos = Egresso.objects.select_related('cidade', 'cidade__regiao').annotate(
+        ultima_interacao=Max('interacoes__data')
+    ).all()
+
+    busca = request.GET.get('busca', '')
+    estado = request.GET.get('estado', '')
+    regiao_id = request.GET.get('regiao', '')
+    cidade_id = request.GET.get('cidade', '')
+    curso = request.GET.get('curso', '')
+    instituicao = request.GET.get('instituicao', '')
+
+    if busca:
+        egressos = egressos.filter(
+            Q(nome__icontains=busca) |
+            Q(telefone__icontains=busca) |
+            Q(email__icontains=busca) |
+            Q(cidade_nome__icontains=busca)
+        )
+    if estado:
+        egressos = egressos.filter(estado=estado)
+    if regiao_id:
+        egressos = egressos.filter(cidade__regiao_id=regiao_id)
+    if cidade_id:
+        egressos = egressos.filter(cidade_id=cidade_id)
+    if curso:
+        egressos = egressos.filter(curso=curso)
+    if instituicao:
+        egressos = egressos.filter(instituicao=instituicao)
+
+    egressos, current_sort, current_dir = _apply_sorting(
+        request, egressos, ['nome', 'cidade_nome', 'estado', 'curso', 'instituicao', 'created_at']
+    )
+
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="egressos.csv"'
+        response.charset = 'utf-8-sig'
+        writer = csv.writer(response)
+        writer.writerow(['Nome', 'Telefone', 'Email', 'Redes Sociais', 'Cidade', 'UF', 'Curso', 'Instituição', 'Situação', 'Observações'])
+        for e in egressos:
+            writer.writerow([e.nome, e.telefone, e.email, e.instagram, e.cidade_nome, e.estado, e.curso, e.instituicao, e.situacao_curso, e.observacoes])
+        return response
+
+    paginator, page_obj = _paginate(request, egressos)
+
+    cidades_filtro = []
+    if regiao_id:
+        cidades_filtro = Cidade.objects.filter(regiao_id=regiao_id).order_by('nome')
+
+    qs_params = request.GET.copy()
+    qs_params.pop('page', None)
+    query_string = qs_params.urlencode()
+
+    base_qs = Egresso.objects.all()
+    return render(request, 'liderancas/egresso_list.html', {
+        'page_obj': page_obj,
+        'regioes': Regiao.objects.all().order_by('sigla'),
+        'cidades_filtro': cidades_filtro,
+        'estados': base_qs.exclude(estado='').values_list('estado', flat=True).distinct().order_by('estado'),
+        'cursos': base_qs.exclude(curso='').values_list('curso', flat=True).distinct().order_by('curso'),
+        'instituicoes': base_qs.exclude(instituicao='').values_list('instituicao', flat=True).distinct().order_by('instituicao'),
+        'busca': busca,
+        'estado_filtro': estado,
+        'regiao_filtro': regiao_id,
+        'cidade_filtro': cidade_id,
+        'curso_filtro': curso,
+        'instituicao_filtro': instituicao,
+        'total': paginator.count,
+        'query_string': query_string,
+        'current_sort': current_sort,
+        'current_dir': current_dir,
+    })
+
+
+@secao_required('liderancas:egressos')
+def egresso_create(request):
+    if request.method == 'POST':
+        form = EgressoForm(request.POST)
+        if form.is_valid():
+            egresso = form.save(commit=False)
+            egresso.cadastrado_por = request.user
+            egresso.save()
+            messages.success(request, 'Egresso cadastrado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
+            return redirect('liderancas:egresso_list')
+    else:
+        form = EgressoForm()
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
+    return render(request, 'liderancas/egresso_form.html', {
+        'form': form,
+        'titulo': 'Novo Egresso',
+    })
+
+
+@secao_required('liderancas:egressos')
+def egresso_edit(request, pk):
+    egresso = get_object_or_404(Egresso, pk=pk)
+    if request.method == 'POST':
+        form = EgressoForm(request.POST, instance=egresso)
+        if form.is_valid():
+            egresso = form.save(commit=False)
+            egresso.atualizado_por = request.user
+            egresso.save()
+            messages.success(request, 'Egresso atualizado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
+            return redirect('liderancas:egresso_list')
+    else:
+        form = EgressoForm(instance=egresso)
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
+    return render(request, 'liderancas/egresso_form.html', {
+        'form': form,
+        'titulo': f'Editar: {egresso}',
+    })
+
+
+@secao_required('liderancas:egressos')
+def egresso_delete(request, pk):
+    egresso = get_object_or_404(Egresso, pk=pk)
+    if request.method == 'POST':
+        egresso.soft_delete(user=request.user)
+        messages.success(request, 'Egresso removido com sucesso.')
+    return redirect('liderancas:egresso_list')
+
+
+# ==================== LASSBERG ====================
+
+@secao_required('liderancas:lassberg')
+def lassberg_list(request):
+    contatos = Lassberg.objects.select_related('cidade', 'cidade__regiao').annotate(
+        ultima_interacao=Max('interacoes__data')
+    ).all()
+
+    busca = request.GET.get('busca', '')
+    estado = request.GET.get('estado', '')
+    regiao_id = request.GET.get('regiao', '')
+    cidade_id = request.GET.get('cidade', '')
+
+    if busca:
+        contatos = contatos.filter(
+            Q(nome__icontains=busca) |
+            Q(telefone__icontains=busca) |
+            Q(email__icontains=busca) |
+            Q(cidade_nome__icontains=busca)
+        )
+    if estado:
+        contatos = contatos.filter(estado=estado)
+    if regiao_id:
+        contatos = contatos.filter(cidade__regiao_id=regiao_id)
+    if cidade_id:
+        contatos = contatos.filter(cidade_id=cidade_id)
+
+    contatos, current_sort, current_dir = _apply_sorting(
+        request, contatos, ['nome', 'cidade_nome', 'estado', 'created_at']
+    )
+
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="lassberg.csv"'
+        response.charset = 'utf-8-sig'
+        writer = csv.writer(response)
+        writer.writerow(['Nome', 'Telefone', 'Email', 'Cidade', 'Estado', 'Observações'])
+        for c in contatos:
+            writer.writerow([c.nome, c.telefone, c.email, c.cidade_nome, c.estado, c.observacoes])
+        return response
+
+    paginator, page_obj = _paginate(request, contatos)
+
+    cidades_filtro = []
+    if regiao_id:
+        cidades_filtro = Cidade.objects.filter(regiao_id=regiao_id).order_by('nome')
+
+    qs_params = request.GET.copy()
+    qs_params.pop('page', None)
+    query_string = qs_params.urlencode()
+
+    return render(request, 'liderancas/lassberg_list.html', {
+        'page_obj': page_obj,
+        'regioes': Regiao.objects.all().order_by('sigla'),
+        'cidades_filtro': cidades_filtro,
+        'estados': Lassberg.objects.exclude(estado='').values_list('estado', flat=True).distinct().order_by('estado'),
+        'busca': busca,
+        'estado_filtro': estado,
+        'regiao_filtro': regiao_id,
+        'cidade_filtro': cidade_id,
+        'total': paginator.count,
+        'query_string': query_string,
+        'current_sort': current_sort,
+        'current_dir': current_dir,
+    })
+
+
+@secao_required('liderancas:lassberg')
+def lassberg_create(request):
+    if request.method == 'POST':
+        form = LassbergForm(request.POST)
+        if form.is_valid():
+            contato = form.save(commit=False)
+            contato.cadastrado_por = request.user
+            contato.save()
+            messages.success(request, 'Contato cadastrado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
+            return redirect('liderancas:lassberg_list')
+    else:
+        form = LassbergForm()
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
+    return render(request, 'liderancas/lassberg_form.html', {
+        'form': form,
+        'titulo': 'Novo Contato Lassberg',
+    })
+
+
+@secao_required('liderancas:lassberg')
+def lassberg_edit(request, pk):
+    contato = get_object_or_404(Lassberg, pk=pk)
+    if request.method == 'POST':
+        form = LassbergForm(request.POST, instance=contato)
+        if form.is_valid():
+            contato = form.save(commit=False)
+            contato.atualizado_por = request.user
+            contato.save()
+            messages.success(request, 'Contato atualizado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
+            return redirect('liderancas:lassberg_list')
+    else:
+        form = LassbergForm(instance=contato)
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
+    return render(request, 'liderancas/lassberg_form.html', {
+        'form': form,
+        'titulo': f'Editar: {contato}',
+    })
+
+
+@secao_required('liderancas:lassberg')
+def lassberg_delete(request, pk):
+    contato = get_object_or_404(Lassberg, pk=pk)
+    if request.method == 'POST':
+        contato.soft_delete(user=request.user)
+        messages.success(request, 'Contato removido com sucesso.')
+    return redirect('liderancas:lassberg_list')
 
 
 @secao_required('liderancas')
@@ -418,6 +717,8 @@ def bulk_action(request):
         'coordenador': CoordenadorRegional,
         'cabo': CaboEleitoral,
         'apoiador': Apoiador,
+        'egresso': Egresso,
+        'lassberg': Lassberg,
     }
     model = model_map.get(entity_type)
     if not model:
@@ -462,6 +763,8 @@ def bulk_action(request):
         'coordenador': 'liderancas:coordenador_list',
         'cabo': 'liderancas:cabo_list',
         'apoiador': 'liderancas:apoiador_list',
+        'egresso': 'liderancas:egresso_list',
+        'lassberg': 'liderancas:lassberg_list',
     }
     return redirect(redirect_map.get(entity_type, 'liderancas:apoiador_list'))
 
@@ -474,11 +777,15 @@ def interacao_add(request, entidade_tipo, pk):
         'coordenador': CoordenadorRegional,
         'cabo': CaboEleitoral,
         'apoiador': Apoiador,
+        'egresso': Egresso,
+        'lassberg': Lassberg,
     }
     redirect_map = {
         'coordenador': 'liderancas:coordenador_list',
         'cabo': 'liderancas:cabo_list',
         'apoiador': 'liderancas:apoiador_list',
+        'egresso': 'liderancas:egresso_list',
+        'lassberg': 'liderancas:lassberg_list',
     }
     model = model_map.get(entidade_tipo)
     if not model:
@@ -514,6 +821,8 @@ def interacao_add_ajax(request, entidade_tipo, pk):
         'coordenador': CoordenadorRegional,
         'cabo': CaboEleitoral,
         'apoiador': Apoiador,
+        'egresso': Egresso,
+        'lassberg': Lassberg,
     }
     model = model_map.get(entidade_tipo)
     if not model:
@@ -542,6 +851,8 @@ def interacao_list(request, entidade_tipo, pk):
         'coordenador': CoordenadorRegional,
         'cabo': CaboEleitoral,
         'apoiador': Apoiador,
+        'egresso': Egresso,
+        'lassberg': Lassberg,
     }
     model = model_map.get(entidade_tipo)
     if not model:
@@ -744,10 +1055,7 @@ def dashboard(request):
 
 # ==================== API ====================
 
-@secao_required('liderancas')
-def api_cidades(request, regiao_id):
-    cidades = Cidade.objects.filter(regiao_id=regiao_id).values('id', 'nome')
-    return JsonResponse(list(cidades), safe=False)
+api_cidades = core_api_cidades
 
 
 # ==================== MOBILIZAÇÃO ====================
@@ -794,8 +1102,7 @@ def mobilizacao_list(request):
             ])
         return response
 
-    paginator = Paginator(voluntarios, 50)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    paginator, page_obj = _paginate(request, voluntarios)
 
     cidades_filtro = []
     if regiao_id:
@@ -827,9 +1134,13 @@ def mobilizacao_create(request):
             vol.cadastrado_por = request.user
             vol.save()
             messages.success(request, 'Voluntário cadastrado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
             return redirect('liderancas:mobilizacao_list')
     else:
         form = VoluntarioForm()
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
     return render(request, 'liderancas/mobilizacao_form.html', {
         'form': form,
         'titulo': 'Novo Voluntário',
@@ -844,9 +1155,13 @@ def mobilizacao_edit(request, pk):
         if form.is_valid():
             form.save()
             messages.success(request, 'Voluntário atualizado com sucesso.')
+            if _ajax(request):
+                return JsonResponse({'ok': True})
             return redirect('liderancas:mobilizacao_list')
     else:
         form = VoluntarioForm(instance=vol)
+    if _ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
     return render(request, 'liderancas/mobilizacao_form.html', {
         'form': form,
         'titulo': f'Editar: {vol.nome}',

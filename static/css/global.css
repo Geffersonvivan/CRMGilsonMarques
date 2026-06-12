@@ -222,6 +222,74 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
     background: #002776; color: #fff; border-color: #002776; font-weight: 600;
 }
 
+/* ---------- Pagination bar (rodapé do card de listagem) ---------- */
+.pagination-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    padding: 10px 16px; border-top: 1px solid #e2e8f0; background: #fff;
+    font-size: 0.78rem; color: #64748b;
+}
+.pagination-bar .pagination-text strong { color: #334155; font-weight: 600; }
+.pagination-controls { display: flex; align-items: center; gap: 18px; }
+.pagination-pp { display: flex; align-items: center; gap: 7px; color: #64748b; }
+.pagination-pp select {
+    padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px;
+    font-size: 0.76rem; color: #374151; background: #fff; cursor: pointer;
+}
+.pagination-pp select:hover { border-color: #cbd5e1; }
+.pagination-pages { display: flex; gap: 4px; }
+.pagination-pages a, .pagination-pages span {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 28px; height: 28px; padding: 0 7px;
+    border: 1px solid #e2e8f0; border-radius: 7px;
+    font-size: 0.76rem; color: #475569; text-decoration: none;
+    background: #fff; transition: all 0.15s;
+}
+.pagination-pages a:hover { background: #f8fafc; border-color: #3b82f6; color: #3b82f6; }
+.pagination-pages .current { background: #002776; color: #fff; border-color: #002776; font-weight: 600; }
+.pagination-pages .disabled { color: #cbd5e1; cursor: default; }
+.pagination-pages .ellipsis { border: none; background: transparent; color: #94a3b8; min-width: 20px; }
+
+/* ---------- Form Modal (cadastro/edição via AJAX) ---------- */
+.form-modal-box {
+    background: #fff; border-radius: 16px; width: 1080px; max-width: 96vw;
+    max-height: 92vh; display: flex; flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04);
+    animation: formModalIn 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+.form-modal-body .form-grid { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 1000px) { .form-modal-body .form-grid { grid-template-columns: 1fr 1fr; } }
+@keyframes formModalIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+}
+.form-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px; border-bottom: 1px solid #f1f5f9;
+}
+.form-modal-header .modal-title { font-size: 1.05rem; font-weight: 700; color: #0f172a; }
+.form-modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+.form-modal-footer {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 14px 24px; border-top: 1px solid #f1f5f9; background: #f8fafc;
+    border-radius: 0 0 16px 16px;
+}
+.form-modal-loading {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 60px 0; color: #94a3b8; font-size: 0.85rem;
+}
+.form-modal-loading .spinner {
+    width: 18px; height: 18px; border: 2px solid #e2e8f0; border-top-color: #002776;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.form-modal-errors {
+    background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 14px; font-size: 0.8rem; color: #b91c1c;
+}
+.form-modal-errors ul { list-style: none; margin: 0; padding: 0; }
+@media (max-width: 640px) { .form-modal-body .form-grid { grid-template-columns: 1fr !important; } }
+
 /* ---------- Messages / Toasts ---------- */
 .msg-toast {
     padding: 12px 20px; border-radius: 12px; font-size: 0.85rem;

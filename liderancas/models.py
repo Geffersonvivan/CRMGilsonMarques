@@ -327,11 +327,24 @@ class Apoiador(SoftDeleteMixin, models.Model):
         ('pendente', 'Pendente'),
     ]
 
+    CARGO_CHOICES = [
+        ('prefeito', 'Prefeito'),
+        ('vice_prefeito', 'Vice-Prefeito'),
+        ('vereador', 'Vereador'),
+        ('presidente_diretorio', 'Presidente Diretório'),
+        ('ex_politico', 'Ex-Político'),
+        ('outro', 'Outro'),
+    ]
+
     nome = models.CharField(max_length=200)
     telefone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
     cidade = models.ForeignKey(Cidade, on_delete=models.PROTECT, related_name='apoiadores')
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    cargo = models.CharField(
+        max_length=25, choices=CARGO_CHOICES, blank=True,
+        verbose_name='Cargo Político',
+    )
     origem_contato = models.CharField(max_length=200, blank=True, verbose_name='Origem do Contato')
     instagram = models.CharField(max_length=100, blank=True)
     prioridade = models.CharField(max_length=10, choices=PRIORIDADE_CHOICES, default='media', verbose_name='Prioridade Comunicação')
@@ -417,6 +430,86 @@ class Voluntario(models.Model):
         return [mapa.get(d, d) for d in self.disponibilidades]
 
 
+class Egresso(SoftDeleteMixin, models.Model):
+    nome = models.CharField(max_length=200)
+    telefone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    instagram = models.CharField(max_length=100, blank=True, verbose_name='Redes Sociais')
+    cidade_nome = models.CharField(max_length=150, blank=True, verbose_name='Cidade (texto)')
+    estado = models.CharField(max_length=2, blank=True, verbose_name='UF')
+    cidade = models.ForeignKey(
+        Cidade, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='egressos',
+        verbose_name='Cidade (SC)',
+    )
+    curso = models.CharField(max_length=150, blank=True)
+    instituicao = models.CharField(max_length=150, blank=True, verbose_name='Instituição')
+    situacao_curso = models.CharField(max_length=50, blank=True, verbose_name='Situação do Curso')
+    observacoes = models.TextField(blank=True, verbose_name='Observações')
+
+    cadastrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='egressos_cadastrados',
+    )
+    atualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='egressos_atualizados',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Egresso'
+        verbose_name_plural = 'Egressos'
+        ordering = ['nome']
+
+    def __str__(self):
+        return self.nome
+
+
+class Lassberg(SoftDeleteMixin, models.Model):
+    nome = models.CharField(max_length=200)
+    telefone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    cidade_nome = models.CharField(max_length=150, blank=True, verbose_name='Cidade (texto)')
+    estado = models.CharField(max_length=30, blank=True, verbose_name='Estado')
+    cidade = models.ForeignKey(
+        Cidade, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lassbergs',
+        verbose_name='Cidade (SC)',
+    )
+    observacoes = models.TextField(blank=True, verbose_name='Observações')
+
+    cadastrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='lassbergs_cadastrados',
+    )
+    atualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lassbergs_atualizados',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Lassberg'
+        verbose_name_plural = 'Lassberg'
+        ordering = ['nome']
+
+    def __str__(self):
+        return self.nome
+
+
 class InteracaoLog(models.Model):
     TIPO_CHOICES = [
         ('ligacao', 'Ligação'),
@@ -440,6 +533,14 @@ class InteracaoLog(models.Model):
         Apoiador, on_delete=models.CASCADE,
         null=True, blank=True, related_name='interacoes',
     )
+    egresso = models.ForeignKey(
+        Egresso, on_delete=models.CASCADE,
+        null=True, blank=True, related_name='interacoes',
+    )
+    lassberg = models.ForeignKey(
+        Lassberg, on_delete=models.CASCADE,
+        null=True, blank=True, related_name='interacoes',
+    )
 
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
     descricao = models.TextField(verbose_name='Descrição')
@@ -457,12 +558,12 @@ class InteracaoLog(models.Model):
         ordering = ['-data']
 
     def __str__(self):
-        target = self.coordenador or self.cabo or self.apoiador
+        target = self.entidade
         return f'{self.get_tipo_display()} — {target} ({self.data:%d/%m/%Y})'
 
     @property
     def entidade(self):
-        return self.coordenador or self.cabo or self.apoiador
+        return self.coordenador or self.cabo or self.apoiador or self.egresso or self.lassberg
 
     @property
     def entidade_tipo(self):
@@ -472,4 +573,8 @@ class InteracaoLog(models.Model):
             return 'cabo'
         if self.apoiador_id:
             return 'apoiador'
+        if self.egresso_id:
+            return 'egresso'
+        if self.lassberg_id:
+            return 'lassberg'
         return ''

@@ -33,6 +33,9 @@ def _paginate(request, queryset, default=50):
         per_page = default
     if per_page not in PER_PAGE_OPTIONS:
         per_page = default
+    # annotate(Max(...)) descarta o Meta.ordering — sem isso a paginação embaralha
+    if not queryset.ordered:
+        queryset = queryset.order_by('nome')
     paginator = Paginator(queryset, per_page)
     return paginator, paginator.get_page(request.GET.get('page'))
 

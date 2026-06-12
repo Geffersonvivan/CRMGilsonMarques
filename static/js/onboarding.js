@@ -11,7 +11,8 @@
     // ===== Banners de primeira visita =====
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('[data-onboarding]').forEach(function (el) {
-            var chave = 'onb_' + el.dataset.onboarding;
+            var usuario = document.body.dataset.username || '';
+            var chave = 'onb_' + el.dataset.onboarding + '_' + usuario;
             if (localStorage.getItem(chave)) return;
             el.classList.add('onb-visible');
             var btn = document.createElement('button');

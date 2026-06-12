@@ -11,7 +11,8 @@
     document.addEventListener('DOMContentLoaded', function () {
         if (!window.CRM_TOUR || !window.driver || !window.driver.js) return;
         var cfg = window.CRM_TOUR;
-        var chave = 'tour_' + cfg.key;
+        var usuario = document.body.dataset.username || '';
+        var chave = 'tour_' + cfg.key + '_' + usuario;
         var forcado = new URLSearchParams(window.location.search).get('tour') === '1';
         if (localStorage.getItem(chave) && !forcado) return;
 

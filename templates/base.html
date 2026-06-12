@@ -10,7 +10,7 @@
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body data-username="{{ user.username|default:'' }}">
 
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-top-row">
@@ -193,16 +193,16 @@
 
         {% if user.perfil == 'admin' or user.is_superuser or 'config' in user.secoes_permitidas %}
         <div class="sidebar-item" data-section="ajuda">
-            <a href="{% url 'ajuda' %}" class="sidebar-icon" title="Como funciona" style="text-decoration:none;">
+            <button class="sidebar-icon" title="Como funciona" onclick="window.location.href='{% url 'ajuda' %}'">
                 <span class="icon-wrap">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"/>
                         <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/>
                     </svg>
                 </span>
                 <span class="sidebar-label">Como funciona</span>
-            </a>
+            </button>
         </div>
 
         <span class="sidebar-section">Admin</span>

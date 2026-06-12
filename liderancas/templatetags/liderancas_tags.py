@@ -95,15 +95,15 @@ def contact_badge(ultima_interacao):
 
 @register.filter
 def email_icon(email):
-    """Ícone de e-mail clicável (vazio quando não há e-mail)."""
+    """Ícone de e-mail: tooltip imediato com o endereço, clique copia."""
     if not email:
         return ''
     e = escape(email)
     return mark_safe(
-        f'<a href="mailto:{e}" class="chan-icon" title="{e}">'
+        f'<button type="button" class="chan-icon" data-tip="{e}" onclick="copyChan(this, \'{e}\')">'
         f'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
         f'<rect x="2" y="4" width="20" height="16" rx="2"/>'
-        f'<path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></a>'
+        f'<path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>'
     )
 
 
@@ -115,7 +115,7 @@ def instagram_icon(username):
     handle = re.sub(r'[^a-zA-Z0-9._]', '', username.lstrip('@'))
     u = escape(username)
     return mark_safe(
-        f'<a href="https://instagram.com/{handle}" target="_blank" class="chan-icon" title="{u}">'
+        f'<a href="https://instagram.com/{handle}" target="_blank" class="chan-icon" data-tip="{u}">'
         f'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
         f'<rect x="2" y="2" width="20" height="20" rx="5"/>'
         f'<circle cx="12" cy="12" r="5"/>'
@@ -135,4 +135,4 @@ def relacionamento_dot(obj):
     cores = {'alta': '#dc2626', 'media': '#f59e0b', 'baixa': '#10b981'}
     cor = cores.get(prio, '#94a3b8')
     title = escape(' · '.join(partes))
-    return mark_safe(f'<span class="prio-dot" style="background:{cor}" title="{title}"></span>')
+    return mark_safe(f'<span class="prio-dot" style="background:{cor}" data-tip="{title}"></span>')

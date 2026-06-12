@@ -258,8 +258,9 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
 .chan-icons { display: inline-flex; gap: 5px; align-items: center; }
 .chan-icon {
     display: inline-flex; width: 26px; height: 26px;
-    border: 1px solid #e2e8f0; border-radius: 6px;
-    align-items: center; justify-content: center; color: #64748b; transition: all 0.15s;
+    border: 1px solid #e2e8f0; border-radius: 6px; background: #fff;
+    align-items: center; justify-content: center; color: #64748b;
+    transition: all 0.15s; cursor: pointer !important; padding: 0;
 }
 .chan-icon:hover { border-color: #002776; color: #002776; background: #eef4ff; }
 .chan-icon svg { width: 14px; height: 14px; }

@@ -103,3 +103,21 @@ document.addEventListener('click', function (e) {
     menu.style.left = Math.max(8, r.right - 165) + 'px';
 });
 }
+
+// ===== Copiar canal (e-mail) com feedback no tooltip =====
+window.copyChan = function (btn, text) {
+    function feedback() {
+        var original = btn.getAttribute('data-tip');
+        btn.setAttribute('data-tip', 'Copiado!');
+        setTimeout(function () { btn.setAttribute('data-tip', original); }, 1400);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(feedback);
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy'); ta.remove();
+        feedback();
+    }
+};
+

@@ -14,6 +14,7 @@ SECOES_CHOICES = [
     ('demandas:eventos', '— Eventos'),
     ('demandas:roteiros', '— Roteiros'),
     ('demandas:tarefas', '— Tarefas'),
+    ('demandas:promessas', '— Promessas'),
     # Equipes
     ('equipes', 'Equipes'),
     ('equipes:mobilizacao', '— Mobilização'),

@@ -93,6 +93,9 @@
                 {% if user.perfil == 'admin' or user.is_superuser or 'demandas:tarefas' in user.secoes_permitidas %}
                 <li><a href="{% url 'tarefas:lista' %}">Tarefas</a></li>
                 {% endif %}
+                {% if user.perfil == 'admin' or user.is_superuser or 'demandas:promessas' in user.secoes_permitidas %}
+                <li><a href="{% url 'tarefas:promessa_list' %}">Promessas</a></li>
+                {% endif %}
             </ul>
         </div>
         {% endif %}

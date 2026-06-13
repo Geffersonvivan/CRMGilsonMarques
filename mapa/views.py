@@ -2330,6 +2330,14 @@ class CityActionAPI(APIView):
         proximo = Compromisso.objects.filter(cidade=cid, data_hora_inicio__gte=agora) \
             .exclude(status='cancelado').order_by('data_hora_inicio').first()
 
+        from tarefas.models import Promessa
+        promessas = [{
+            'descricao': pr.descricao, 'status': pr.status,
+            'status_label': pr.get_status_display(), 'bairro': pr.bairro_linha,
+        } for pr in Promessa.objects.filter(cidade=cid).exclude(status='cancelada').order_by('status', '-data_registro')[:6]]
+        prom_pendentes = Promessa.objects.filter(cidade=cid).exclude(status__in=['entregue', 'cancelada']).count()
+        prom_entregues = Promessa.objects.filter(cidade=cid, status='entregue').count()
+
         return Response({
             'id': cid.id,
             'nome': cid.nome,
@@ -2347,6 +2355,9 @@ class CityActionAPI(APIView):
                 'data': timezone.localtime(proximo.data_hora_inicio).strftime('%d/%m %H:%M'),
             } if proximo else None,
             'top_vencidos': vencidos[:6],
+            'promessas': promessas,
+            'prom_pendentes': prom_pendentes,
+            'prom_entregues': prom_entregues,
         })
 
 

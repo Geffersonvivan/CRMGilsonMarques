@@ -527,8 +527,8 @@
 <!-- Dashboard contextual abaixo do mapa -->
 <div class="map-wrapper map-dashboard map-dashboard-hidden" id="mapDashboard"></div>
 
-<script src="{% static 'js/map/api.js' %}?v=8"></script>
-<script src="{% static 'js/map/sc-map.js' %}?v=8"></script>
+<script src="{% static 'js/map/api.js' %}?v=9"></script>
+<script src="{% static 'js/map/sc-map.js' %}?v=9"></script>
 <script>
 (function() {
     const map = new SCMap('map-container');
@@ -1474,10 +1474,21 @@ case 'transferencia': {
         } else {
             html += '<div style="color:#16a34a;font-weight:600;font-size:.78rem;">Relacionamento em dia nesta cidade. 🎉</div>';
         }
+
+        // Promessas ao eleitor nesta cidade
+        if ((d.promessas || []).length) {
+            html += `<div style="font-size:.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin:12px 0 5px;">🤝 Promessas (${d.prom_entregues} entregues · ${d.prom_pendentes} pendentes)</div>`;
+            for (const pr of d.promessas) {
+                const cor = pr.status === 'entregue' ? '#16a34a' : pr.status === 'cancelada' ? '#94a3b8' : '#ea580c';
+                html += `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid #f8fafc;font-size:.76rem;"><span>${pr.descricao}${pr.bairro ? ' <span style=\"color:#94a3b8;\">('+pr.bairro+')</span>' : ''}</span><span style="color:${cor};font-weight:700;white-space:nowrap;">${pr.status_label}</span></div>`;
+            }
+        }
+
         html += '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">';
         html += `<a href="/agenda/compromissos/?cidade=${d.id}&data=${dataSel}" style="flex:1;text-align:center;background:#002776;color:#fff;border-radius:8px;padding:8px 10px;font-size:.76rem;font-weight:700;text-decoration:none;">+ Compromisso</a>`;
         html += `<button onclick="addRotStopFromPanel('${d.slug}')" style="flex:1;background:#fff;border:1px solid #002776;color:#002776;border-radius:8px;padding:8px 10px;font-size:.76rem;font-weight:700;cursor:pointer;">🧭 + Roteiro</button>`;
         html += '</div>';
+        html += `<a href="/tarefas/promessas/nova/?cidade=${d.id}" onclick="return openFormModal(this.href, 'Nova Promessa — ' + d.nome)" style="display:block;text-align:center;margin-top:8px;background:#fff;border:1px solid #16a34a;color:#16a34a;border-radius:8px;padding:8px 10px;font-size:.76rem;font-weight:700;text-decoration:none;">🤝 + Registrar promessa do eleitor</a>`;
         body.innerHTML = html;
     }
 

@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load liderancas_tags %}
+
+{% block extra_css %}
+<style>
+    .resumo { display: flex; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+    .resumo .card-r { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 18px; min-width: 130px; }
+    .resumo .num { font-size: 1.4rem; font-weight: 800; color: #0f172a; }
+    .resumo .lbl { font-size: 0.72rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+    .resumo .verde .num { color: #16a34a; }
+    .resumo .laranja .num { color: #ea580c; }
+    .resumo .azul .num { color: #2563eb; }
+
+    .actions { display: flex; gap: 3px; justify-content: center; }
+    .actions .btn-icon { width: 28px; height: 28px; padding: 0; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #6b7280; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.15s; }
+    .actions .btn-icon:hover { background: #e6edf8; color: #002776; border-color: #002776; }
+    .actions .btn-icon svg { width: 14px; height: 14px; }
+
+    .table-scroll { overflow-x: auto; }
+    .table-scroll table { width: 100%; border-collapse: collapse; }
+    .table-scroll th, .table-scroll td { font-size: 0.74rem; padding: 6px 8px; text-align: left; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
+    .table-scroll thead th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; color: #64748b; font-weight: 600; background: #f8fafc; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    .table-scroll tbody tr:hover { background: #f8fafc; }
+    .cell-main { font-weight: 600; color: #1e293b; }
+    .badge-st { font-size: 0.66rem; font-weight: 700; padding: 2px 8px; border-radius: 9px; white-space: nowrap; }
+    .st-registrada { background: #e0e7ff; color: #3730a3; }
+    .st-em_andamento { background: #fef3c7; color: #92400e; }
+    .st-entregue { background: #dcfce7; color: #166534; }
+    .st-cancelada { background: #f1f5f9; color: #64748b; }
+    .col-c { text-align: center !important; white-space: nowrap; }
+
+    #filterForm .filters-row { flex-wrap: nowrap; gap: 18px; align-items: center; }
+    #filterForm .filter-group { min-width: 0; flex: 1 1 0; }
+    #filterForm .fg-busca { flex: 1.4 1 0; }
+    #filterForm .filter-group input, #filterForm .filter-group select { width: 100%; text-overflow: ellipsis; }
+    #filterForm .filter-actions { display: flex; gap: 8px; flex-shrink: 0; padding-top: 21px; }
+    @media (max-width: 900px) { #filterForm .filters-row { flex-wrap: wrap; } #filterForm .filter-group { min-width: 160px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title" data-tip="Demandas do eleitor / compromissos firmados com a cidade. Entregar é moeda de voto.">Promessas ao Eleitor <span class="page-subtitle">{{ total }} registros</span></h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <a href="?{{ query_string }}&export=csv" class="btn btn-outline btn-sm">Exportar CSV</a>
+        <a href="{% url 'tarefas:promessa_create' %}" class="btn btn-primary" onclick="return openFormModal(this.href, 'Nova Promessa')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nova Promessa
+        </a>
+    </div>
+</div>
+
+<div class="resumo">
+    <div class="card-r"><div class="num">{{ total }}</div><div class="lbl">Promessas</div></div>
+    <div class="card-r verde"><div class="num">{{ entregues }}</div><div class="lbl">Entregues</div></div>
+    <div class="card-r laranja"><div class="num">{{ pendentes }}</div><div class="lbl">Pendentes</div></div>
+    <div class="card-r azul"><div class="num">{{ taxa }}%</div><div class="lbl">Taxa de entrega</div></div>
+</div>
+
+<div class="filters-card">
+    <form method="get" id="filterForm">
+        <div class="filters-row">
+            <div class="filter-group fg-busca">
+                <label>Busca</label>
+                <input type="text" name="busca" placeholder="Demanda, quem pediu, responsável..." value="{{ busca }}">
+            </div>
+            <div class="filter-group">
+                <label>Região</label>
+                <select name="regiao" id="filtroRegiao" onchange="onRegiaoChange()">
+                    <option value="">Todas</option>
+                    {% for r in regioes %}<option value="{{ r.id }}" {% if regiao_filtro == r.id|stringformat:"d" %}selected{% endif %}>{{ r.sigla }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Cidade</label>
+                <select name="cidade" id="filtroCidade">
+                    <option value="">Todas</option>
+                    {% for c in cidades_filtro %}<option value="{{ c.id }}" {% if cidade_filtro == c.id|stringformat:"d" %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select name="status">
+                    <option value="">Todos</option>
+                    {% for v, l in status_choices %}<option value="{{ v }}" {% if status_filtro == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+                <a href="{% url 'tarefas:promessa_list' %}" class="btn btn-outline btn-sm">Limpar</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+<div class="table-scroll">
+    <table>
+        <thead>
+            <tr>
+                <th>Demanda</th><th>Cidade</th><th>Bairro/Linha</th><th>Quem pediu</th>
+                <th>Responsável</th><th>Status</th><th class="col-c">Registro</th><th class="col-c">Entrega</th><th class="col-c">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in page_obj %}
+            <tr>
+                <td class="cell-main">{{ p.descricao }}</td>
+                <td>{{ p.cidade.nome }} <span class="badge">{{ p.cidade.regiao.sigla }}</span></td>
+                <td>{{ p.bairro_linha|default:"-" }}</td>
+                <td>{{ p.solicitante|default:"-" }}</td>
+                <td>{{ p.responsavel|default:"-" }}</td>
+                <td><span class="badge-st st-{{ p.status }}">{{ p.get_status_display }}</span></td>
+                <td class="col-c">{{ p.data_registro|date:"d/m/y" }}</td>
+                <td class="col-c">{{ p.data_entrega|date:"d/m/y"|default:"-" }}</td>
+                <td class="col-c">
+                    <div class="actions">
+                        <a href="{% url 'tarefas:promessa_edit' p.pk %}" class="btn-icon" title="Editar" onclick="return openFormModal(this.href, 'Editar Promessa')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </a>
+                        {% if p.status != 'entregue' and p.status != 'cancelada' %}
+                        <button type="button" class="btn-icon" title="Gerar tarefa de entrega" onclick="gerarTarefa({{ p.pk }})">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        </button>
+                        {% endif %}
+                        <form method="post" action="{% url 'tarefas:promessa_delete' p.pk %}" onsubmit="return confirm('Remover esta promessa?')" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-icon" title="Excluir" style="color:#dc2626;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" style="text-align:center;color:#9ca3af;padding:40px;">Nenhuma promessa registrada. Clique em "Nova Promessa" para mapear as demandas do eleitor.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'liderancas/_pagination.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function onRegiaoChange() {
+    var rid = document.getElementById('filtroRegiao').value;
+    var cs = document.getElementById('filtroCidade');
+    cs.innerHTML = '<option value="">Todas</option>';
+    if (!rid) return;
+    fetch('/liderancas/api/cidades/' + rid + '/').then(r => r.json()).then(cs2 => {
+        cs2.forEach(c => { var o = document.createElement('option'); o.value = c.id; o.textContent = c.nome; cs.appendChild(o); });
+    });
+}
+function gerarTarefa(pk) {
+    if (!confirm('Criar uma tarefa de entrega para esta promessa?')) return;
+    fetch('/tarefas/promessas/' + pk + '/gerar-tarefa/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(r => r.json()).then(d => {
+        if (d.ok) { if (confirm('Tarefa criada! Abrir agora?')) window.location.href = d.url; else location.reload(); }
+        else alert('Erro ao criar tarefa.');
+    }).catch(() => alert('Erro de conexão.'));
+}
+</script>
+{% endblock %}

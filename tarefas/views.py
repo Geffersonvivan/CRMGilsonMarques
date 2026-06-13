@@ -1027,3 +1027,147 @@ def api_tarefa_desagendar(request, pk):
         _registrar_historico(tarefa, request.user, 'compromisso_desvinculado', titulo_ant, '')
 
     return JsonResponse({'ok': True})
+
+
+# ==================== PROMESSAS (Demandas do Eleitor) ====================
+
+from .models import Promessa
+from .forms import PromessaForm
+
+
+def _promessa_ajax(request):
+    return request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+
+@secao_required('demandas:promessas')
+def promessa_list(request):
+    import csv
+    from django.http import HttpResponse
+    qs = Promessa.objects.select_related('cidade', 'cidade__regiao').all()
+
+    busca = request.GET.get('busca', '')
+    regiao_id = request.GET.get('regiao', '')
+    cidade_id = request.GET.get('cidade', '')
+    status = request.GET.get('status', '')
+
+    if busca:
+        qs = qs.filter(
+            Q(descricao__icontains=busca) | Q(solicitante__icontains=busca) |
+            Q(responsavel__icontains=busca) | Q(bairro_linha__icontains=busca)
+        )
+    if regiao_id:
+        qs = qs.filter(cidade__regiao_id=regiao_id)
+    if cidade_id:
+        qs = qs.filter(cidade_id=cidade_id)
+    if status:
+        qs = qs.filter(status=status)
+
+    if request.GET.get('export') == 'csv':
+        resp = HttpResponse(content_type='text/csv')
+        resp['Content-Disposition'] = 'attachment; filename="promessas.csv"'
+        resp.charset = 'utf-8-sig'
+        w = csv.writer(resp)
+        w.writerow(['Demanda', 'Cidade', 'Região', 'Bairro/Linha', 'Quem pediu', 'Responsável', 'Status', 'Registro', 'Entrega', 'Observações'])
+        for p in qs:
+            w.writerow([p.descricao, p.cidade.nome, p.cidade.regiao.sigla, p.bairro_linha,
+                        p.solicitante, p.responsavel, p.get_status_display(),
+                        p.data_registro.strftime('%d/%m/%Y') if p.data_registro else '',
+                        p.data_entrega.strftime('%d/%m/%Y') if p.data_entrega else '', p.observacoes])
+        return resp
+
+    total = qs.count()
+    entregues = qs.filter(status='entregue').count()
+    pendentes = qs.exclude(status__in=['entregue', 'cancelada']).count()
+    taxa = round(entregues / (total - qs.filter(status='cancelada').count()) * 100) if (total - qs.filter(status='cancelada').count()) else 0
+
+    paginator = Paginator(qs, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    cidades_filtro = Cidade.objects.filter(regiao_id=regiao_id).order_by('nome') if regiao_id else []
+    qs_params = request.GET.copy()
+    qs_params.pop('page', None)
+
+    return render(request, 'tarefas/promessa_list.html', {
+        'page_obj': page_obj,
+        'total': total, 'entregues': entregues, 'pendentes': pendentes, 'taxa': taxa,
+        'regioes': Regiao.objects.all().order_by('sigla'),
+        'cidades_filtro': cidades_filtro,
+        'status_choices': Promessa.STATUS_CHOICES,
+        'busca': busca, 'regiao_filtro': regiao_id, 'cidade_filtro': cidade_id, 'status_filtro': status,
+        'query_string': qs_params.urlencode(),
+    })
+
+
+@secao_required('demandas:promessas')
+def promessa_create(request):
+    initial = {}
+    cidade_pre = request.GET.get('cidade')
+    if cidade_pre:
+        cid = Cidade.objects.filter(pk=cidade_pre).first()
+        if cid:
+            initial = {'cidade': cid.pk, 'regiao': cid.regiao_id}
+    if request.method == 'POST':
+        form = PromessaForm(request.POST)
+        if form.is_valid():
+            p = form.save(commit=False)
+            p.cadastrado_por = request.user
+            p.save()
+            messages.success(request, 'Promessa registrada com sucesso.')
+            if _promessa_ajax(request):
+                return JsonResponse({'ok': True})
+            return redirect('tarefas:promessa_list')
+    else:
+        form = PromessaForm(initial=initial)
+    if _promessa_ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
+    return render(request, 'tarefas/promessa_form.html', {'form': form, 'titulo': 'Nova Promessa'})
+
+
+@secao_required('demandas:promessas')
+def promessa_edit(request, pk):
+    p = get_object_or_404(Promessa, pk=pk)
+    if request.method == 'POST':
+        form = PromessaForm(request.POST, instance=p)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Promessa atualizada com sucesso.')
+            if _promessa_ajax(request):
+                return JsonResponse({'ok': True})
+            return redirect('tarefas:promessa_list')
+    else:
+        form = PromessaForm(instance=p)
+    if _promessa_ajax(request):
+        return render(request, 'liderancas/_form_fields.html', {'form': form})
+    return render(request, 'tarefas/promessa_form.html', {'form': form, 'titulo': f'Editar: {p.descricao}'})
+
+
+@secao_required('demandas:promessas')
+@require_POST
+def promessa_delete(request, pk):
+    p = get_object_or_404(Promessa, pk=pk)
+    p.delete()
+    messages.success(request, 'Promessa removida.')
+    return redirect('tarefas:promessa_list')
+
+
+@secao_required('demandas:promessas')
+@require_POST
+def promessa_gerar_tarefa(request, pk):
+    """Cria uma Tarefa de entrega vinculada à promessa."""
+    p = get_object_or_404(Promessa, pk=pk)
+    t = Tarefa.objects.create(
+        titulo=f'Entregar: {p.descricao}',
+        descricao=f'Demanda de {p.solicitante or "eleitor"} em {p.cidade.nome}'
+                  + (f' ({p.bairro_linha})' if p.bairro_linha else ''),
+        tipo='articulacao',
+        fase='a_fazer',
+        prioridade='alta',
+        regiao=p.cidade.regiao,
+        cidade=p.cidade,
+        observacoes=p.observacoes,
+        cadastrado_por=request.user,
+    )
+    if p.status == 'registrada':
+        p.status = 'em_andamento'
+        p.save(update_fields=['status'])
+    return JsonResponse({'ok': True, 'tarefa_id': t.id, 'url': f'/tarefas/{t.id}/'})

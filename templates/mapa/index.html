@@ -394,6 +394,7 @@
             <div class="mode-bar-wrap">
                 <div class="mode-bar" id="modeBar">
                     <button class="mode-btn" data-mode="eleicoes_2022">Eleições 2022</button>
+                    <button class="mode-btn" data-mode="vitoria">🎯 Vitória 2026</button>
                     <button class="mode-btn" data-mode="regioes">Regiões</button>
                     <button class="mode-btn" data-mode="calor">Mapa de Calor</button>
                     <button class="mode-btn" data-mode="demandas">Demandas</button>
@@ -780,6 +781,12 @@
         },
     };
 
+    helpData.vitoria = {
+        what: 'O <strong>tabuleiro de guerra da campanha</strong>. Em vez de mostrar onde fomos bem no passado, mostra <strong>onde estão os votos que faltam para 2026</strong> e onde é mais fácil buscá-los.',
+        how: 'As cidades são pintadas pelos <strong>votos disponíveis</strong> (potencial − votos de 2022): vermelho = muita lacuna (oportunidade), verde = poucos votos sobrando (saturada). Cada cidade é classificada em 4 estratégias: 🛡️ Celeiro (defender), ✅ Fortaleza (manter), 💰 Mina de ouro (atacar), ⚪ Marginal. Clique numa cidade para o painel de ação: vencidos, última visita e botões de agendar.',
+        example: '<strong>Exemplo:</strong> uma cidade grande pintada de vermelho, classificada como 💰 Mina de ouro e com alerta "órfã" (zero estrutura) é a maior oportunidade ignorada da campanha — muito voto disponível e ninguém trabalhando lá.',
+    };
+
     const helpPanel = document.getElementById('helpPanel');
     const btnHelp = document.getElementById('btnHelp');
     const helpClose = document.getElementById('helpClose');
@@ -819,6 +826,13 @@
             {color: '#ef4444', label: '11º+'},
         ],
         regioes: [],
+        vitoria: [
+            {color: '#f87171', label: 'Muita lacuna'},
+            {color: '#fdba74', label: 'Alta'},
+            {color: '#fde68a', label: 'Média'},
+            {color: '#bbf7d0', label: 'Baixa'},
+            {color: '#e2e8f0', label: 'Saturada'},
+        ],
         calor: [
             {color: '#22c55e', label: '\u22653%'},
             {color: '#a3e635', label: '\u22652%'},
@@ -933,6 +947,11 @@
                 case 'roteiros':
                     renderRoteirosDashboard();
                     break;
+                case 'vitoria': {
+                    const data = await API.maps.victory();
+                    renderVictoryDashboard(data);
+                    break;
+                }
                 case 'estrategico': {
                     const data = await API.dashboard.strategic();
                     renderStrategicDashboard(data);
@@ -1321,7 +1340,20 @@ case 'transferencia': {
 
         document.getElementById('capTitulo').textContent = `${d.nome} · ${d.regiao}`;
         const dataSel = document.getElementById('rotBuilderData')?.value || _amanha();
-        let html = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">';
+        let html = '';
+        // Cabeçalho estratégico (modo Vitória 2026)
+        const vc = (map._victoryData?.cities || {})[slug];
+        if (map.victoryEnabled && vc) {
+            html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:10px;">';
+            html += `<div style="font-weight:700;color:#0f172a;margin-bottom:4px;">${map._quadLabel(vc.quadrante)}</div>`;
+            html += `<div style="display:flex;justify-content:space-between;font-size:.76rem;color:#475569;"><span>Votos 2022</span><strong>${(vc.votos_2022||0).toLocaleString('pt-BR')}</strong></div>`;
+            html += `<div style="display:flex;justify-content:space-between;font-size:.76rem;color:#475569;"><span>Potencial</span><strong>${(vc.meta||0).toLocaleString('pt-BR')}</strong></div>`;
+            html += `<div style="display:flex;justify-content:space-between;font-size:.78rem;color:#dc2626;font-weight:700;border-top:1px solid #e2e8f0;margin-top:4px;padding-top:4px;"><span>Votos disponíveis</span><span>+${(vc.gap||0).toLocaleString('pt-BR')}</span></div>`;
+            if (vc.alerta === 'orfa') html += '<div style="margin-top:6px;font-size:.72rem;color:#dc2626;font-weight:700;">🚨 Oportunidade órfã — sem nenhuma estrutura aqui</div>';
+            if (vc.alerta === 'esfriando') html += '<div style="margin-top:6px;font-size:.72rem;color:#ea580c;font-weight:700;">⚠️ Base esfriando — relacionamento vencido</div>';
+            html += '</div>';
+        }
+        html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">';
         html += `<span style="background:#fee2e2;color:#991b1b;font-weight:700;border-radius:8px;padding:3px 9px;font-size:.74rem;">${d.vencidos} vencidos</span>`;
         html += `<span style="background:#fef3c7;color:#92400e;border-radius:8px;padding:3px 9px;font-size:.74rem;">${d.nunca} nunca</span>`;
         if (d.alta) html += `<span style="background:#ffedd5;color:#c2410c;border-radius:8px;padding:3px 9px;font-size:.74rem;">⭐ ${d.alta} alta</span>`;
@@ -1346,6 +1378,95 @@ case 'transferencia': {
     }
 
     map.onCityAction = openCityActionPanel;
+
+    // ── Vitória 2026: dashboard estratégico ───────────────────────
+    let _victoryQuadFiltro = null;
+    const QUAD_INFO = {
+        celeiro:   { label: '🛡️ Celeiro',     cor: '#16a34a', desc: 'Forte e grande — defender a base' },
+        fortaleza: { label: '✅ Fortaleza',   cor: '#22c55e', desc: 'Forte e pequena — manter' },
+        mina_ouro: { label: '💰 Mina de ouro', cor: '#f59e0b', desc: 'Fraca e grande — atacar' },
+        marginal:  { label: '⚪ Marginal',     cor: '#94a3b8', desc: 'Fraca e pequena — baixa prioridade' },
+    };
+
+    function renderVictoryDashboard(data) {
+        const s = data.summary;
+        let html = '<div class="dash-summary"><span class="dash-summary-title">🎯 Vitória 2026 — onde estão os votos que faltam</span></div>';
+
+        html += '<div style="display:flex;gap:18px;flex-wrap:wrap;margin:6px 0 12px;align-items:flex-end;">';
+        const big = [
+            ['Base 2022', s.votos_2022.toLocaleString('pt-BR'), '#1e293b'],
+            ['Meta da campanha', s.meta_campanha.toLocaleString('pt-BR'), '#002776'],
+            ['Faltam p/ a meta', s.falta_meta.toLocaleString('pt-BR'), '#dc2626'],
+            ['Potencial mapeado', s.potencial.toLocaleString('pt-BR'), '#64748b'],
+        ];
+        for (const [lbl, val, cor] of big) {
+            html += `<div><div style="font-size:1.5rem;font-weight:800;color:${cor};line-height:1;">${val}</div><div style="font-size:.7rem;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">${lbl}</div></div>`;
+        }
+        html += '</div>';
+
+        // Cards de quadrante (clicáveis = filtro)
+        html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px;">';
+        for (const q of ['mina_ouro','celeiro','fortaleza','marginal']) {
+            const info = QUAD_INFO[q];
+            const ativo = _victoryQuadFiltro === q;
+            html += `<div onclick="filtrarQuadrante('${q}')" style="cursor:pointer;background:${ativo ? info.cor : '#fff'};border:2px solid ${info.cor};border-radius:10px;padding:10px 12px;transition:all .15s;">`;
+            html += `<div style="font-size:1.3rem;font-weight:800;color:${ativo ? '#fff' : info.cor};">${data.quadrantes[q] || 0}</div>`;
+            html += `<div style="font-size:.74rem;font-weight:700;color:${ativo ? '#fff' : '#1e293b'};">${info.label}</div>`;
+            html += `<div style="font-size:.66rem;color:${ativo ? 'rgba(255,255,255,.85)' : '#94a3b8'};">${info.desc}</div>`;
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // Alertas
+        html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">';
+        html += `<span onclick="filtrarAlerta('orfa')" style="cursor:pointer;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:8px;padding:6px 12px;font-size:.76rem;font-weight:700;">🚨 ${data.alertas.orfas} oportunidades órfãs</span>`;
+        html += `<span onclick="filtrarAlerta('esfriando')" style="cursor:pointer;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:8px;padding:6px 12px;font-size:.76rem;font-weight:700;">⚠️ ${data.alertas.esfriando} bases esfriando</span>`;
+        if (_victoryQuadFiltro || _victoryAlertaFiltro) html += `<span onclick="limparFiltroVitoria()" style="cursor:pointer;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;padding:6px 12px;font-size:.76rem;">Limpar filtro</span>`;
+        html += '</div>';
+
+        // Tabela das maiores oportunidades (aplicando filtros)
+        let lista = Object.values(data.cities);
+        if (_victoryQuadFiltro) lista = lista.filter(c => c.quadrante === _victoryQuadFiltro);
+        if (_victoryAlertaFiltro) lista = lista.filter(c => c.alerta === _victoryAlertaFiltro);
+        lista.sort((a, b) => b.gap - a.gap);
+        const titulo = _victoryQuadFiltro ? QUAD_INFO[_victoryQuadFiltro].label : (_victoryAlertaFiltro ? 'Alerta: ' + _victoryAlertaFiltro : 'Maiores lacunas');
+        html += `<div class="dash-table-wrap"><div class="dash-table-header"><h3>${titulo}</h3><span>${lista.length} cidades</span></div>`;
+        html += '<table class="dash-table"><thead><tr><th>Cidade</th><th>Região</th><th>Classificação</th><th class="text-right">Votos 2022</th><th class="text-right">Disponíveis</th><th class="text-right">Penetr.</th><th>Estrutura</th></tr></thead><tbody>';
+        for (const c of lista.slice(0, 40)) {
+            const info = QUAD_INFO[c.quadrante];
+            const estr = c.estrutura === 0 ? '<span style="color:#dc2626;font-weight:700;">nenhuma</span>' : `${c.estrutura}${c.vencidos ? ' (' + c.vencidos + ' vencidos)' : ''}`;
+            html += '<tr style="cursor:pointer;" onclick="openCityActionPanel(\'' + c.slug + '\' )">';
+            html += `<td><strong>${c.name}</strong>${c.alerta === 'orfa' ? ' 🚨' : c.alerta === 'esfriando' ? ' ⚠️' : ''}</td>`;
+            html += `<td>${c.region}</td>`;
+            html += `<td><span style="color:${info.cor};font-weight:600;">${info.label}</span></td>`;
+            html += `<td class="text-right">${c.votos_2022.toLocaleString('pt-BR')}</td>`;
+            html += `<td class="text-right"><strong style="color:#dc2626;">+${c.gap.toLocaleString('pt-BR')}</strong></td>`;
+            html += `<td class="text-right">${c.penetracao}%</td>`;
+            html += `<td>${estr}</td>`;
+            html += '</tr>';
+        }
+        html += '</tbody></table></div>';
+
+        dashEl.innerHTML = html;
+        dashEl.classList.remove('map-dashboard-hidden');
+    }
+
+    let _victoryAlertaFiltro = null;
+    window.filtrarQuadrante = function (q) {
+        _victoryQuadFiltro = _victoryQuadFiltro === q ? null : q;
+        _victoryAlertaFiltro = null;
+        if (map._victoryData) renderVictoryDashboard(map._victoryData);
+    };
+    window.filtrarAlerta = function (a) {
+        _victoryAlertaFiltro = _victoryAlertaFiltro === a ? null : a;
+        _victoryQuadFiltro = null;
+        if (map._victoryData) renderVictoryDashboard(map._victoryData);
+    };
+    window.limparFiltroVitoria = function () {
+        _victoryQuadFiltro = null;
+        _victoryAlertaFiltro = null;
+        if (map._victoryData) renderVictoryDashboard(map._victoryData);
+    };
 
     // ── Estrategico Dashboard ──────────────────────────────────
     const strategicColors = {
@@ -1975,8 +2096,11 @@ case 'transferencia': {
         map.concorrenciaEnabled = false;
         map.perfilIdeologicoEnabled = false;
         map.visitUrgencyEnabled = false;
-        if (mode !== 'roteiros') {
+        map.victoryEnabled = false;
+        if (mode !== 'roteiros' && mode !== 'vitoria') {
             closeCityActionPanel();
+        }
+        if (mode !== 'roteiros') {
             rotBuilder.ativo = false;
             rotBuilder.stops = [];
             map.setBuilderStops([]);
@@ -2018,6 +2142,9 @@ case 'transferencia': {
             case 'roteiros':
                 await map.setItineraries(true, false);
                 await map.setVisitUrgency(true);
+                break;
+            case 'vitoria':
+                await map.setVictory(true);
                 break;
             case 'estrategico':
                 await map.setStrategic(true);

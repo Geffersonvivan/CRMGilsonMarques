@@ -2278,3 +2278,149 @@ class CityActionAPI(APIView):
             } if proximo else None,
             'top_vencidos': vencidos[:6],
         })
+
+
+# ─── API: VITÓRIA 2026 (lacuna de votos + quadrantes + presença CRM) ──────
+
+class VictoryMapAPI(APIView):
+    """Tabuleiro de guerra 2026: por cidade, cruza votos 2022 → meta sugerida
+    (lacuna), classificação estratégica (celeiro/mina de ouro/etc.) e a
+    presença atual da campanha (estrutura CRM + relacionamento vencido).
+
+    Meta sugerida = max(votos_2022 × 1.4, eleitores × 1.2%), arredondada;
+    o campo Cidade.meta_votos sobrescreve quando preenchido.
+    """
+
+    TARGET_PEN = 0.012   # alvo aspiracional de penetração (1,2% do eleitorado)
+    GROWTH = 1.4         # crescimento mínimo sobre a base de 2022
+    PEN_FORTE = 1.0      # % penetração para considerar o LS "forte" na cidade
+    PORTE_GRANDE = 12000  # eleitores para considerar a cidade "grande"
+
+    def get(self, request):
+        from django.db.models import Max, Count
+        from liderancas.views import FREQ_PRAZOS
+        agora = timezone.now()
+
+        coord_count = dict(
+            CoordenadorRegional.objects.values('cidade_base')
+            .annotate(n=Count('id')).values_list('cidade_base', 'n')
+        )
+        cabo_count = dict(
+            CaboEleitoral.objects.values('cidade')
+            .annotate(n=Count('id')).values_list('cidade', 'n')
+        )
+        apoi_count = dict(
+            Apoiador.objects.values('cidade')
+            .annotate(n=Count('id')).values_list('cidade', 'n')
+        )
+
+        vencidos = defaultdict(int)
+
+        def acumular(qs, campo):
+            for c in qs.annotate(ultima=Max('interacoes__data')):
+                prazo = FREQ_PRAZOS.get(c.frequencia_relacionamento, 30)
+                dias = (agora - c.ultima).days if c.ultima else None
+                if dias is None or dias > prazo:
+                    vencidos[getattr(c, campo)] += 1
+
+        acumular(CaboEleitoral.objects.all(), 'cidade_id')
+        acumular(Apoiador.objects.all(), 'cidade_id')
+        acumular(CoordenadorRegional.objects.all(), 'cidade_base_id')
+
+        cities, regions = {}, {}
+        quad_labels = ['celeiro', 'fortaleza', 'mina_ouro', 'marginal']
+        quad_count = {q: 0 for q in quad_labels}
+        tot_v, tot_meta, tot_gap = 0, 0, 0
+        n_orfa = n_esfriando = 0
+
+        def nivel_gap(g):
+            if g <= 20:
+                return 0
+            if g <= 60:
+                return 1
+            if g <= 150:
+                return 2
+            if g <= 400:
+                return 3
+            return 4
+
+        for cid in Cidade.objects.select_related('regiao'):
+            v = cid.votos_sorgatto_2022 or 0
+            elei = cid.eleitores or 0
+            meta = cid.meta_votos or int(round(max(v * self.GROWTH, elei * self.TARGET_PEN) / 10) * 10)
+            gap = max(0, meta - v)
+            pen = (v / elei * 100) if elei else 0
+            forte = pen >= self.PEN_FORTE
+            grande = elei >= self.PORTE_GRANDE
+            if forte and grande:
+                quad = 'celeiro'
+            elif forte:
+                quad = 'fortaleza'
+            elif grande:
+                quad = 'mina_ouro'
+            else:
+                quad = 'marginal'
+
+            coord = coord_count.get(cid.id, 0)
+            cabo = cabo_count.get(cid.id, 0)
+            apoi = apoi_count.get(cid.id, 0)
+            estrutura = coord + cabo + apoi
+            venc = vencidos.get(cid.id, 0)
+
+            alerta = None
+            if quad == 'mina_ouro' and estrutura == 0:
+                alerta = 'orfa'
+                n_orfa += 1
+            elif quad in ('celeiro', 'fortaleza') and estrutura > 0 and venc >= estrutura * 0.6:
+                alerta = 'esfriando'
+                n_esfriando += 1
+
+            cities[cid.slug] = {
+                'id': cid.id, 'name': cid.nome, 'region': cid.regiao.sigla,
+                'region_slug': cid.regiao.slug, 'eleitores': elei,
+                'votos_2022': v, 'meta': meta, 'gap': gap,
+                'penetracao': round(pen, 2), 'quadrante': quad,
+                'coord': coord, 'cabo': cabo, 'apoi': apoi,
+                'estrutura': estrutura, 'vencidos': venc,
+                'alerta': alerta, 'nivel': nivel_gap(gap),
+                'lat': cid.latitude, 'lng': cid.longitude,
+            }
+            tot_v += v
+            tot_meta += meta
+            tot_gap += gap
+            quad_count[quad] += 1
+
+            r = regions.setdefault(cid.regiao.slug, {
+                'gap': 0, 'meta': 0, 'votos_2022': 0, 'orfas': 0, 'pior': '', 'pior_gap': -1,
+            })
+            r['gap'] += gap
+            r['meta'] += meta
+            r['votos_2022'] += v
+            if alerta == 'orfa':
+                r['orfas'] += 1
+            if gap > r['pior_gap']:
+                r['pior_gap'] = gap
+                r['pior'] = cid.nome
+
+        # nível de cor por região conforme o gap total
+        gaps_reg = sorted((r['gap'] for r in regions.values()), reverse=True) or [0]
+        max_gap_reg = gaps_reg[0] or 1
+        for r in regions.values():
+            frac = r['gap'] / max_gap_reg
+            r['nivel'] = 4 if frac > 0.66 else 3 if frac > 0.4 else 2 if frac > 0.2 else 1 if frac > 0.05 else 0
+
+        from core.models import Configuracao
+        meta_campanha = Configuracao.get().meta_votos or 0
+
+        return Response({
+            'summary': {
+                'votos_2022': tot_v, 'potencial': tot_meta, 'gap': tot_gap,
+                'meta_campanha': meta_campanha,
+                'falta_meta': max(0, meta_campanha - tot_v),
+                'cidades': len(cities),
+            },
+            'quadrantes': quad_count,
+            'alertas': {'orfas': n_orfa, 'esfriando': n_esfriando},
+            'cities': cities,
+            'regions': regions,
+        })

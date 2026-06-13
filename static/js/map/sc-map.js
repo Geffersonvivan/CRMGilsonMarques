@@ -340,6 +340,7 @@ class SCMap {
             fronteira:   { label: 'Fronteira de expansão', short: 'score', type: 'frontier', dom: [0, 50, 100], fmt: v => Math.round(v) },
             esforco:     { label: 'Esforço de campo (visitas)', short: 'visitas', type: 'good', dyn: true, fmt: v => Math.round(v) },
             doacoes:     { label: 'Doações', short: 'R$', type: 'good', dyn: true, fmt: v => 'R$ ' + Math.round(v).toLocaleString('pt-BR') },
+            forca_politica: { label: 'Força política (prefeitos/vereadores)', short: 'pts', type: 'good', dyn: true, fmt: v => Math.round(v) },
             divergencia: { label: '2022 × Estrutura hoje', short: '', type: 'diverging', dom: [-100, 0, 100], fmt: v => (v > 0 ? '+' : '') + Math.round(v) },
         };
     }
@@ -392,6 +393,14 @@ class SCMap {
         if (!o) return html + '<div class="tooltip-row"><span style="color:#9ca3af">Sem dados</span></div>';
         const val = o[this.heatLayer];
         html += `<div class="tooltip-row"><span class="tooltip-label">${cfg.label}:</span> <span class="tooltip-value" style="color:${this._heatColor(this.heatLayer, val)};font-weight:800">${cfg.fmt(val || 0)}</span></div>`;
+        if (this.heatLayer === 'forca_politica') {
+            const partes = [];
+            if (o.pol_prefeito) partes.push(o.pol_prefeito + ' prefeito');
+            if (o.pol_vereador) partes.push(o.pol_vereador + ' vereador(es)');
+            if (o.pol_presidente) partes.push(o.pol_presidente + ' diretório');
+            html += `<div class="tooltip-row"><span class="tooltip-label">Aliados:</span> <span class="tooltip-value">${partes.join(', ') || 'nenhum'}</span></div>`;
+            if (o.votos_maquina) html += `<div class="tooltip-row"><span class="tooltip-label">Votos de máquina:</span> <span class="tooltip-value">${o.votos_maquina.toLocaleString('pt-BR')}</span></div>`;
+        }
         if (o.penetracao !== undefined && this.heatLayer !== 'penetracao') html += `<div class="tooltip-row"><span class="tooltip-label">Penetração 2022:</span> <span class="tooltip-value">${o.penetracao}%</span></div>`;
         if (o.votos_2022 !== undefined) html += `<div class="tooltip-row"><span class="tooltip-label">Votos 2022:</span> <span class="tooltip-value">${(o.votos_2022||0).toLocaleString('pt-BR')}</span></div>`;
         if (o.apoiadores !== undefined) html += `<div class="tooltip-row"><span class="tooltip-label">Apoiadores:</span> <span class="tooltip-value">${o.apoiadores||0}</span></div>`;

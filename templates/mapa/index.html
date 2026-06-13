@@ -527,8 +527,8 @@
 <!-- Dashboard contextual abaixo do mapa -->
 <div class="map-wrapper map-dashboard map-dashboard-hidden" id="mapDashboard"></div>
 
-<script src="{% static 'js/map/api.js' %}?v=11"></script>
-<script src="{% static 'js/map/sc-map.js' %}?v=11"></script>
+<script src="{% static 'js/map/api.js' %}?v=12"></script>
+<script src="{% static 'js/map/sc-map.js' %}?v=12"></script>
 <script>
 (function() {
     const map = new SCMap('map-container');
@@ -1099,6 +1099,7 @@ case 'transferencia': {
         fronteira:   { label: 'Fronteira de expansão', grad: 'linear-gradient(to right,#f1f5f9,#c4b5fd,#6d28d9)', lo: 'distante', hi: 'fronteira', desc: 'Cidades coladas na base, com tração — o voto mais barato de conquistar' },
         esforco:     { label: 'Esforço de campo', grad: 'linear-gradient(to right,#ef4444,#eab308,#22c55e)', lo: 'ausente', hi: 'ativo', desc: 'Compromissos realizados — onde o candidato já pisou' },
         doacoes:     { label: 'Doações', grad: 'linear-gradient(to right,#ef4444,#eab308,#22c55e)', lo: 'R$0', hi: 'alta', desc: 'Arrecadação confirmada por cidade' },
+        forca_politica: { label: 'Força política', grad: 'linear-gradient(to right,#e2e8f0,#86efac,#15803d)', lo: 'sem aliado', hi: 'forte', desc: 'Peso dos prefeitos e vereadores aliados — onde está nosso músculo político' },
         divergencia: { label: '2022 × Estrutura hoje', grad: 'linear-gradient(to right,#dc2626,#f1f5f9,#2563eb)', lo: 'abandonando', hi: 'investindo', desc: 'Vermelho = forte em 2022 mas sem estrutura agora; azul = construindo onde éramos fracos' },
     };
     let _heatLayerAtual = 'penetracao';

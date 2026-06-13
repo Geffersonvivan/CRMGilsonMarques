@@ -23,6 +23,31 @@ ALLIED_PARTIES = {'PL', 'PP', 'REPUBLICANOS', 'UNIÃO', 'UNIÃO BRASIL'}
 ADVERSARY_PARTIES = {'PT', 'PSOL', 'PCdoB', 'REDE', 'PV', 'SOLIDARIEDADE'}
 
 
+def _politicos_por_cidade():
+    """Ativos políticos aliados por cidade, AO VIVO do Apoiador.cargo."""
+    from collections import defaultdict
+    pol = defaultdict(lambda: {'prefeito': 0, 'vice': 0, 'vereador': 0,
+                               'presidente': 0, 'votos_maquina': 0, 'meta_transferir': 0})
+    cargo_map = {'prefeito': 'prefeito', 'vice_prefeito': 'vice',
+                 'vereador': 'vereador', 'presidente_diretorio': 'presidente'}
+    for ap in Apoiador.objects.filter(tipo='politico', status='ativo').values(
+        'cidade_id', 'cargo', 'votos_referencia', 'meta_votos_transferir',
+    ):
+        d = pol[ap['cidade_id']]
+        k = cargo_map.get(ap['cargo'])
+        if k:
+            d[k] += 1
+        d['votos_maquina'] += ap['votos_referencia'] or 0
+        d['meta_transferir'] += ap['meta_votos_transferir'] or 0
+    return pol
+
+
+def _forca_politica(d):
+    """Placar de força política da cidade: prefeito pesa mais, vereador por
+    cabeça, diretório = estrutura partidária."""
+    return d['prefeito'] * 50 + d['vice'] * 25 + d['vereador'] * 15 + d['presidente'] * 20
+
+
 # ─── PÁGINAS ───────────────────────────────────────────────────────
 
 @secao_required('mapa')
@@ -788,26 +813,30 @@ class PLNetworkAPI(APIView):
         if totals['total_voters']:
             avg_penetration = (totals['total_votes'] or 0) / totals['total_voters'] * 100
 
+        politicos = _politicos_por_cidade()   # ativos do cadastro (Apoiador.cargo)
         raw_results = []
 
         for city in cities:
+            pol = politicos.get(city.id, {'prefeito': 0, 'vice': 0, 'vereador': 0,
+                                          'presidente': 0, 'votos_maquina': 0, 'meta_transferir': 0})
             voters = city.eleitores or 0
             votes_2022 = city.votos_sorgatto_2022 or 0
             penetration = (votes_2022 / voters * 100) if voters > 0 else 0
 
             coord_score = 100 if (city.coord_count or 0) > 0 else 0
-            ver_pct = (city.num_vereadores_pl / city.num_vereadores * 100) if city.num_vereadores else 0
-            ver_score = min(ver_pct * 2, 100)
-            dir_score = 100 if city.presidente_pl else 0
+            ver_score = min(pol['vereador'] * 30, 100)        # cada vereador aliado = 30 pts
+            pref_score = 100 if pol['prefeito'] > 0 else 0
+            dir_score = 100 if (pol['presidente'] > 0 or city.presidente_pl) else 0
             density = ((city.total_apoiadores or 0) / max(voters, 1)) * 100
             contact_score = min(density / max(state_density * 2, 0.01) * 100, 100)
             cabo_score = min((city.cabo_count or 0) * 25, 100)
 
             total_score = round(
-                coord_score * 0.25
+                coord_score * 0.18
                 + ver_score * 0.25
-                + dir_score * 0.20
-                + contact_score * 0.15
+                + pref_score * 0.17
+                + dir_score * 0.15
+                + contact_score * 0.10
                 + cabo_score * 0.15
             )
 
@@ -832,9 +861,11 @@ class PLNetworkAPI(APIView):
                 'registered_voters': voters,
                 'mayor_party': city.prefeito_partido or '',
                 'num_vereadores': city.num_vereadores or 0,
-                'num_vereadores_pl': city.num_vereadores_pl or 0,
+                'num_vereadores_pl': pol['vereador'],
+                'prefeito_aliado': pol['prefeito'] > 0,
                 'has_coordinator': (city.coord_count or 0) > 0,
-                'pl_executive_president': city.presidente_pl or '',
+                'pl_executive_president': city.presidente_pl or ('Diretório' if pol['presidente'] else ''),
+                'votos_maquina': pol['votos_maquina'],
                 'apoiadores': city.total_apoiadores or 0,
                 'cabos': city.cabo_count or 0,
                 'raw_score': total_score,
@@ -2664,6 +2695,7 @@ class HeatLayersAPI(APIView):
             Doacao.objects.filter(status='confirmada').values('cidade')
             .annotate(t=Sum('valor')).values_list('cidade', 't')
         )
+        politicos = _politicos_por_cidade()
 
         TARGET_PEN, GROWTH = 0.012, 1.4
         raw = []
@@ -2675,6 +2707,8 @@ class HeatLayersAPI(APIView):
             dens = (ap / elei * 1000) if elei else 0   # apoiadores por mil eleitores
             meta = cid.meta_votos or int(round(max(v * GROWTH, elei * TARGET_PEN) / 10) * 10)
             gap = max(0, meta - v)
+            pol = politicos.get(cid.id, {'prefeito': 0, 'vice': 0, 'vereador': 0,
+                                         'presidente': 0, 'votos_maquina': 0, 'meta_transferir': 0})
             raw.append({
                 'cid': cid, 'slug': cid.slug, 'name': cid.nome,
                 'region_slug': cid.regiao.slug, 'region': cid.regiao.sigla,
@@ -2683,6 +2717,10 @@ class HeatLayersAPI(APIView):
                 'apoiadores': ap, 'densidade': round(dens, 2), 'lacuna': gap,
                 'absoluto': v, 'esforco': visitas.get(cid.id, 0),
                 'doacoes': float(doacoes.get(cid.id, 0) or 0),
+                'forca_politica': _forca_politica(pol),
+                'pol_prefeito': pol['prefeito'], 'pol_vice': pol['vice'],
+                'pol_vereador': pol['vereador'], 'pol_presidente': pol['presidente'],
+                'votos_maquina': pol['votos_maquina'],
                 '_pen': pen, '_dens': dens,
             })
 
@@ -2720,7 +2758,9 @@ class HeatLayersAPI(APIView):
         # ── Monta resposta (cidades) e agrega regiões ──
         keep = ['slug', 'name', 'region_slug', 'region', 'lat', 'lng', 'eleitores',
                 'votos_2022', 'penetracao', 'apoiadores', 'densidade', 'lacuna',
-                'absoluto', 'esforco', 'doacoes', 'fronteira', 'divergencia']
+                'absoluto', 'esforco', 'doacoes', 'fronteira', 'divergencia',
+                'forca_politica', 'pol_prefeito', 'pol_vice', 'pol_vereador',
+                'pol_presidente', 'votos_maquina']
         cities = {r['slug']: {k: r[k] for k in keep} for r in raw}
 
         regions = {}
@@ -2730,7 +2770,8 @@ class HeatLayersAPI(APIView):
                 'sigla': r['region'], 'nome': r['cid'].regiao.nome,
                 'votos': 0, 'eleitores': 0, 'apoiadores': 0, 'lacuna': 0,
                 'esforco': 0, 'doacoes': 0, 'fronteira': 0, 'div_sum': 0,
-                'populacao': 0, 'n': 0,
+                'forca_politica': 0, 'pol_prefeito': 0, 'pol_vereador': 0,
+                'pol_presidente': 0, 'votos_maquina': 0, 'populacao': 0, 'n': 0,
             })
             g['populacao'] += (r['cid'].populacao or 0)
             g['votos'] += r['votos_2022']
@@ -2741,6 +2782,11 @@ class HeatLayersAPI(APIView):
             g['doacoes'] += r['doacoes']
             g['fronteira'] = max(g['fronteira'], r['fronteira'])
             g['div_sum'] += r['divergencia']
+            g['forca_politica'] += r['forca_politica']
+            g['pol_prefeito'] += r['pol_prefeito']
+            g['pol_vereador'] += r['pol_vereador']
+            g['pol_presidente'] += r['pol_presidente']
+            g['votos_maquina'] += r['votos_maquina']
             g['n'] += 1
         for g in regions.values():
             n = g['n'] or 1

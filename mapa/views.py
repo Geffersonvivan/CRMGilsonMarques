@@ -2514,9 +2514,12 @@ class HeatLayersAPI(APIView):
         for r in raw:
             rs = r['region_slug']
             g = regions.setdefault(rs, {
+                'sigla': r['region'], 'nome': r['cid'].regiao.nome,
                 'votos': 0, 'eleitores': 0, 'apoiadores': 0, 'lacuna': 0,
-                'esforco': 0, 'doacoes': 0, 'fronteira': 0, 'div_sum': 0, 'n': 0,
+                'esforco': 0, 'doacoes': 0, 'fronteira': 0, 'div_sum': 0,
+                'populacao': 0, 'n': 0,
             })
+            g['populacao'] += (r['cid'].populacao or 0)
             g['votos'] += r['votos_2022']
             g['eleitores'] += r['eleitores']
             g['apoiadores'] += r['apoiadores']

@@ -527,8 +527,8 @@
 <!-- Dashboard contextual abaixo do mapa -->
 <div class="map-wrapper map-dashboard map-dashboard-hidden" id="mapDashboard"></div>
 
-<script src="{% static 'js/map/api.js' %}?v=6"></script>
-<script src="{% static 'js/map/sc-map.js' %}?v=6"></script>
+<script src="{% static 'js/map/api.js' %}?v=7"></script>
+<script src="{% static 'js/map/sc-map.js' %}?v=7"></script>
 <script>
 (function() {
     const map = new SCMap('map-container');
@@ -1144,28 +1144,32 @@ case 'transferencia': {
         }
         html += '</div>';
 
-        // Regions table
-        const regions = data.regions || [];
+        // Tabela de regiões — ranqueada pela camada ativa (acompanha o mapa)
+        const hl = (window.mapApp && window.mapApp._heatLayersData) ? window.mapApp._heatLayersData.regions : {};
+        const regs = Object.entries(hl).map(([slug, r]) => ({ slug, ...r }));
+        regs.sort((a, b) => (b[_heatLayerAtual] || 0) - (a[_heatLayerAtual] || 0));
+        const cfgFmt = {
+            penetracao: v => (v||0).toFixed(2)+'%', densidade: v => (v||0).toFixed(2),
+            lacuna: v => '+'+fmt.number(Math.round(v||0)), absoluto: v => fmt.number(v||0),
+            fronteira: v => Math.round(v||0), esforco: v => fmt.number(v||0),
+            doacoes: v => 'R$ '+fmt.number(Math.round(v||0)), divergencia: v => ((v||0)>0?'+':'')+Math.round(v||0),
+        };
+        const fmtCamada = cfgFmt[_heatLayerAtual] || (v => v);
         html += '<div class="dash-table-wrap"><div class="dash-table-header">';
-        html += `<h3>Regiões (${regions.length} Associações de Municípios)</h3>`;
+        html += `<h3>Regiões por ${m.label} (${regs.length})</h3><span>clique para ver as cidades</span>`;
         html += '</div><table class="dash-table"><thead><tr>';
-        html += '<th>Região</th><th>Macro Região</th><th class="text-right">Votos LS 2022</th>';
-        html += '<th class="text-right">População</th><th class="text-right">Contatos</th>';
-        html += '<th class="text-right">Meta Votos</th>';
+        html += `<th>Região</th><th class="text-right">${m.label}</th><th class="text-right">Votos 2022</th>`;
+        html += '<th class="text-right">População</th><th class="text-right">Apoiadores</th>';
         html += '</tr></thead><tbody>';
-
-        for (const r of regions) {
-            const votos = r.total_votos_2022 || 0;
-            const eleitores = r.total_eleitores || r.eleitores || 0;
-            const pen = eleitores > 0 ? (votos / eleitores * 100) : 0;
-            const penColor = pen >= 3 ? '#22c55e' : pen >= 2 ? '#a3e635' : pen >= 1 ? '#eab308' : pen >= 0.5 ? '#f97316' : '#ef4444';
-            html += '<tr>';
-            html += `<td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${penColor};margin-right:6px;vertical-align:middle;"></span><strong>${r.sigla}</strong></td>`;
-            html += `<td style="color:#64748b;">${r.macro_regiao || '-'}</td>`;
-            html += `<td class="text-right"><strong>${fmt.number(votos)}</strong></td>`;
+        for (const r of regs) {
+            const val = r[_heatLayerAtual];
+            const cor = window.mapApp ? window.mapApp._heatColor(_heatLayerAtual, val) : '#94a3b8';
+            html += `<tr style="cursor:pointer;" onclick="window.mapApp.zoomToRegion('${r.slug}')">`;
+            html += `<td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${cor};margin-right:6px;vertical-align:middle;"></span><strong>${r.sigla}</strong></td>`;
+            html += `<td class="text-right"><strong style="color:${cor};">${fmtCamada(val)}</strong></td>`;
+            html += `<td class="text-right">${fmt.number(r.votos)}</td>`;
             html += `<td class="text-right">${fmt.number(r.populacao)}</td>`;
-            html += `<td class="text-right">${fmt.number(r.total_apoiadores)}</td>`;
-            html += `<td class="text-right">${fmt.number(r.meta_votos)}</td>`;
+            html += `<td class="text-right">${fmt.number(r.apoiadores)}</td>`;
             html += '</tr>';
         }
         html += '</tbody></table></div>';

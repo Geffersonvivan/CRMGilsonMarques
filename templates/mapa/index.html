@@ -527,8 +527,8 @@
 <!-- Dashboard contextual abaixo do mapa -->
 <div class="map-wrapper map-dashboard map-dashboard-hidden" id="mapDashboard"></div>
 
-<script src="{% static 'js/map/api.js' %}?v=13"></script>
-<script src="{% static 'js/map/sc-map.js' %}?v=13"></script>
+<script src="{% static 'js/map/api.js' %}?v=14"></script>
+<script src="{% static 'js/map/sc-map.js' %}?v=14"></script>
 <script>
 (function() {
     const map = new SCMap('map-container');
@@ -664,25 +664,17 @@
                 '<strong>3. Onde o voto pode escapar?</strong> Alertas "voto orgânico frágil" identificam cidades que votaram bem em 2022 sem estrutura PL — esse voto veio sozinho mas pode não se repetir em 2026 sem trabalho de campo.',
         },
         transferencia: {
-            what: 'Análise de <strong>transferência de votos</strong> cruzando <strong>5 camadas de dados</strong>: votação do LS, Jorginho Mello, Carol de Toni, deputados aliados eleitos e perfil socioeconômico (IBGE).<br><br>' +
-                '<table style="width:100%;font-size:.78rem;border-collapse:collapse;margin-bottom:4px">' +
-                '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 0;width:35%"><strong>Votações cruzadas</strong></td><td style="padding-left:8px;color:#64748b">LS (dep. federal), Jorginho (governador) e Carol (dep. federal) — identificam onde há eleitorado aliado que ainda não vota no LS</td></tr>' +
-                '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 0"><strong>Deputados aliados</strong></td><td style="padding-left:8px;color:#64748b">Nome, percentual e quantidade de deputados eleitos aliados em cada cidade — valida se a oportunidade tem "chão" (estrutura real)</td></tr>' +
-                '<tr><td style="padding:3px 0"><strong>Perfil socioeconômico</strong></td><td style="padding-left:8px;color:#64748b">Renda, Bolsa Família, urbanização, MEIs — gera sugestão automática de discurso (econômico, agro, social)</td></tr>' +
-                '</table>',
-            how: 'Cada cidade é classificada pelo <strong>cruzamento de 3 votações</strong> (LS, Jorginho, Carol):<br><br>' +
-                '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#fbbf24;vertical-align:middle;margin-right:4px"></span> <strong style="color:#b45309">Zona de Ouro</strong> — LS + Jorginho + Carol todos acima da média. Base consolidada, só manter.<br>' +
-                '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#15803d;vertical-align:middle;margin-right:4px"></span> <strong style="color:#15803d">Polo LS</strong> — LS forte, governadores não. Território próprio do LS.<br>' +
-                '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#7c3aed;vertical-align:middle;margin-right:4px"></span> <strong style="color:#7c3aed">Buscar Ambos</strong> — Jorginho e Carol fortes, LS fraco. <strong>Maior oportunidade!</strong><br>' +
-                '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#2563eb;vertical-align:middle;margin-right:4px"></span> <strong style="color:#2563eb">Buscar Jorginho</strong> — Só Jorginho forte. Pedir apoio do governador.<br>' +
-                '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#ec4899;vertical-align:middle;margin-right:4px"></span> <strong style="color:#ec4899">Buscar Carol</strong> — Só Carol forte. Articular com a deputada.<br><br>' +
-                '<strong>Novos dados no tooltip:</strong><br>' +
-                '&bull; <strong>Deputado aliado</strong> — nome e % do deputado aliado mais forte na cidade (quando existe, a oportunidade é mais concreta)<br>' +
-                '&bull; <strong>Discurso sugerido</strong> — baseado no perfil IBGE: "econômico" (alta renda + MEIs), "agro" (>40% rural), "social" (alto BF) ou "geral"',
-            example: '<strong>Como usar os novos dados cruzados:</strong><br><br>' +
-                '<strong>1. Priorizar com deputado aliado:</strong> Uma cidade "Buscar Jorginho" (roxo) onde um deputado aliado eleito tem 12% dos votos é muito mais fácil de conquistar do que uma sem nenhuma estrutura. O deputado já tem cabos, lideranças e eventos naquela cidade — basta articular uma agenda conjunta.<br><br>' +
-                '<strong>2. Ajustar o discurso:</strong> Duas cidades "Buscar Ambos" podem exigir abordagens opostas. Uma com tag "agro" (60% rural, baixo PIB) precisa de pauta de infraestrutura rural. Outra com tag "econômico" (alta renda, muitos MEIs) responde melhor a pauta de desburocratização e crédito.<br><br>' +
-                '<strong>3. Transbordamento inteligente:</strong> As setas de transferência agora consideram se a cidade-alvo tem deputado aliado. Priorize transferências para cidades que já têm essa âncora.',
+            what: 'O <strong>planejador de palanque de chapa</strong>. Os candidatos não competem com o LS — são a <strong>chapa dele</strong> em cargos diferentes (Jorginho governador, Carol senadora, Daniela federal, LS estadual). Os votos não competem, se <strong>somam</strong>. O mapa mostra os <strong>redutos de cada aliado</strong> para o LS pegar carona na força e na agenda deles.',
+            how: 'Cada cidade é classificada pela <strong>carona disponível</strong> (quantos aliados de chapa são fortes ali):<br><br>' +
+                '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#7c3aed;vertical-align:middle;margin-right:4px"></span> <strong style="color:#7c3aed">🎤 Palanque conjunto</strong> — 2+ aliados fortes. Evento conjunto, multidão emprestada. <strong>Maior oportunidade!</strong><br>' +
+                '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#f59e0b;vertical-align:middle;margin-right:4px"></span> <strong style="color:#b45309">🤝 Reduto de aliado</strong> — 1 aliado forte. Pegar carona na agenda dele.<br>' +
+                '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#15803d;vertical-align:middle;margin-right:4px"></span> <strong style="color:#15803d">🏠 Polo do LS</strong> — o LS já é forte aqui.<br>' +
+                '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#d1d5db;vertical-align:middle;margin-right:4px"></span> <strong style="color:#64748b">⚪ Sem carona</strong> — sem aliado forte e LS fraco.<br><br>' +
+                'No topo, ligue/desligue os aliados. Clique numa cidade para ver os votos de cada um e <strong>agendar o LS junto</strong>.',
+            example: '<strong>A jogada de campanha:</strong><br><br>' +
+                '<strong>1. Marque a visita do aliado:</strong> ao saber que a Carol fará um comício em Chapecó, registre como <strong>Evento</strong> e marque a Carol. O mapa cruza com o reduto dela e acende o alerta de <strong>palanque pronto</strong>.<br><br>' +
+                '<strong>2. Coloque o LS junto:</strong> clique na cidade → "+ Compromisso" cria a agenda do LS na mesma data, com os cabos locais. O LS sobe no palanque com a Carol, com público e estrutura emprestados.<br><br>' +
+                '<strong>3. Priorize os palanques conjuntos:</strong> cidades roxas (2+ aliados fortes) são os eventos de maior retorno — vários pesos-pesados e multidão de uma vez.',
         },
         deputados: {
             what: 'Mapeia a <strong>relação territorial entre o LS, deputados aliados e adversários</strong>, cruzando com a <strong>agenda de visitas</strong> do CRM. Responde três perguntas fundamentais:<br><br>' +
@@ -851,12 +843,10 @@
             {color: '#9ca3af', label: 'Neutro'},
         ],
         transferencia: [
-            {color: '#fbbf24', label: 'Zona de Ouro'},
-            {color: '#7c3aed', label: 'Buscar Ambos'},
-            {color: '#2563eb', label: 'Buscar Jorginho'},
-            {color: '#ec4899', label: 'Buscar Carol'},
-            {color: '#15803d', label: 'Polo LS'},
-            {color: '#d1d5db', label: 'Baixa Prioridade'},
+            {color: '#7c3aed', label: '🎤 Palanque conjunto'},
+            {color: '#f59e0b', label: '🤝 Reduto de aliado'},
+            {color: '#15803d', label: '🏠 Polo do LS'},
+            {color: '#d1d5db', label: '⚪ Sem carona'},
         ],
         deputados: [
             {color: '#f59e0b', label: 'Ponte Forte'},

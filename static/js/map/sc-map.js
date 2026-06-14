@@ -1141,94 +1141,11 @@ class SCMap {
             .on('mouseleave', () => { self._hideTip(); })
             .on('click', (event, d) => {
                 self._hideTip();
-                window.location.href = `/mapa/cidade/${d.properties.slug}/?mapa=${self.mapMode}`;
+                if (self.onCityAction) self.onCityAction(d.properties.slug);
+                else window.location.href = `/mapa/cidade/${d.properties.slug}/?mapa=${self.mapMode}`;
             });
 
-        // Desenhar setas de transferência
-        let defs = this.svg.select('defs');
-        if (defs.empty()) defs = this.svg.append('defs');
-        defs.selectAll('marker.transfer-arrow-marker').remove();
-
-        ['alta', 'media'].forEach(pri => {
-            const color = this._transferPriorityColor(pri);
-            defs.append('marker')
-                .attr('class', 'transfer-arrow-marker')
-                .attr('id', `transfer-arrow-${pri}`)
-                .attr('viewBox', '0 0 10 6')
-                .attr('refX', 10)
-                .attr('refY', 3)
-                .attr('markerWidth', 7)
-                .attr('markerHeight', 4)
-                .attr('orient', 'auto')
-                .append('path')
-                .attr('d', 'M0,0 L10,3 L0,6 Z')
-                .attr('fill', color)
-                .attr('fill-opacity', 0.7);
-        });
-
-        const topOpps = this._voteTransferData.opportunities
-            .filter(o => o.priority === 'alta')
-            .slice(0, 50);
-
-        topOpps.forEach(opp => {
-            const src = projection([opp.source.cx, opp.source.cy]);
-            const tgt = projection([opp.target.cx, opp.target.cy]);
-            if (!src || !tgt) return;
-
-            const color = this._transferPriorityColor(opp.priority);
-            const width = Math.max(1.5, Math.min(4, opp.potential_votes / 1000));
-
-            // Sombra
-            this.g.append('line')
-                .attr('class', 'transfer-arrow')
-                .attr('x1', src[0]).attr('y1', src[1])
-                .attr('x2', tgt[0]).attr('y2', tgt[1])
-                .attr('stroke', color)
-                .attr('stroke-width', width + 3)
-                .attr('stroke-opacity', 0.08)
-                .attr('pointer-events', 'none');
-
-            // Linha
-            this.g.append('line')
-                .attr('class', 'transfer-arrow')
-                .attr('x1', src[0]).attr('y1', src[1])
-                .attr('x2', tgt[0]).attr('y2', tgt[1])
-                .attr('stroke', color)
-                .attr('stroke-width', width)
-                .attr('stroke-opacity', 0.6)
-                .attr('marker-end', `url(#transfer-arrow-${opp.priority})`)
-                .attr('cursor', 'pointer')
-                .on('mouseenter', (event) => {
-                    let html = `<div class="tooltip-title">${opp.source.name} → ${opp.target.name}</div>`;
-                    html += `<div class="tooltip-row"><span class="tooltip-label">LS origem</span> <span class="tooltip-value" style="color:#15803d">${opp.source.penetration}%</span></div>`;
-                    html += `<div class="tooltip-row"><span class="tooltip-label">LS alvo</span> <span class="tooltip-value" style="color:#f97316">${opp.target.penetration}%</span></div>`;
-                    html += `<div class="tooltip-row"><span class="tooltip-label">Diferença</span> <span class="tooltip-value">${opp.pen_diff}%</span></div>`;
-                    html += `<div class="tooltip-row"><span class="tooltip-label">Potencial</span> <span class="tooltip-value" style="font-weight:bold">+${opp.potential_votes.toLocaleString('pt-BR')} votos</span></div>`;
-                    html += `<div class="tooltip-row"><span class="tooltip-label">Distância</span> <span class="tooltip-value">${opp.distance_km}km</span></div>`;
-                    self._showTip(html, event.pageX, event.pageY);
-                })
-                .on('mousemove', (event) => { self._moveTip(event.pageX, event.pageY); })
-                .on('mouseleave', () => { self._hideTip(); });
-        });
-
-        // Marcadores nos polos
-        const polos = new Map();
-        topOpps.forEach(opp => {
-            if (!polos.has(opp.source.slug)) polos.set(opp.source.slug, opp.source);
-        });
-        polos.forEach(src => {
-            const pt = projection([src.cx, src.cy]);
-            if (!pt) return;
-            this.g.append('circle')
-                .attr('class', 'transfer-marker')
-                .attr('cx', pt[0]).attr('cy', pt[1])
-                .attr('r', 4)
-                .attr('fill', '#15803d')
-                .attr('stroke', '#fff')
-                .attr('stroke-width', 1.5)
-                .attr('opacity', 0.9)
-                .attr('pointer-events', 'none');
-        });
+        // (setas de transferência removidas — o modelo agora é carona de chapa)
 
         // Reset zoom
         this.svg.transition().duration(300).call(this.zoom.transform, d3.zoomIdentity);

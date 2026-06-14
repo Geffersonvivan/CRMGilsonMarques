@@ -547,8 +547,8 @@
     </div>
 </div>
 
-<script src="{% static 'js/map/api.js' %}?v=27"></script>
-<script src="{% static 'js/map/sc-map.js' %}?v=27"></script>
+<script src="{% static 'js/map/api.js' %}?v=28"></script>
+<script src="{% static 'js/map/sc-map.js' %}?v=28"></script>
 <script>
 (function() {
     const map = new SCMap('map-container');
@@ -793,8 +793,34 @@
                 const s = window._demandData.summary || {};
                 return `${n(s.overdue)} demandas vencidas · ${n(s.active)} ativas${s.negligencia ? ` · ${n(s.negligencia)} regiões negligenciadas (muito voto, zero trabalho)` : ''}.`;
             }
-            if (mode === 'eleicoes_2022' && window._calorData) {
-                // (sem dado próprio carregado aqui; mantém estático)
+            if (mode === 'eleicoes_2022' && window._eleicoesData) {
+                const d = window._eleicoesData, ps = d.perf_summary || {}, s = d.summary || {};
+                return `${n(ps.primeiro)} cidades em 1º lugar · ${n(ps.top3)} no top 3 · posição média ${s.avg_position}º · <strong>${n(s.total_ls_votes)}</strong> votos no total.`;
+            }
+            if (mode === 'calor' && window._calorData) {
+                const regs = window._calorData.regions || [];
+                const apo = regs.reduce((a, r) => a + (r.apoiadores || 0), 0);
+                const vazios = regs.filter(r => !r.apoiadores).length;
+                return `${n(apo)} apoiadores cadastrados em ${n(regs.length)} regiões${vazios ? ` · ${n(vazios)} regiões sem nenhum apoiador (vazios a ocupar)` : ''}.`;
+            }
+            if (mode === 'roteiros' && map._visitUrgencyData) {
+                const cs = Object.values(map._visitUrgencyData.cities || {});
+                const crit = cs.filter(c => c.nivel >= 4).length;
+                const nunca = cs.filter(c => c.dias_visita === null).length;
+                return `${n(crit)} cidades em urgência crítica de visita · ${n(nunca)} nunca visitadas pelo candidato.`;
+            }
+            if (mode === 'concorrencia' && typeof compCandidatesList !== 'undefined' && compCandidatesList.length) {
+                const top = [...compCandidatesList].sort((a, b) => (b.data?.cidades_com_voto || 0) - (a.data?.cidades_com_voto || 0))[0];
+                return `${n(compCandidatesList.length)} concorrentes no ranking de ameaça${top ? ` · maior: <strong>${top.data.candidato}</strong> (${n(top.data.cidades_com_voto)} cidades disputadas)` : ''}.`;
+            }
+            if (mode === 'perfil_ideologico' && typeof _perfilData !== 'undefined' && _perfilData && _perfilData.cidades) {
+                const vals = Object.values(_perfilData.cidades).map(c => c.score).filter(v => typeof v === 'number');
+                if (vals.length) {
+                    const sorted = [...vals].sort((a, b) => a - b);
+                    const med = sorted[Math.floor(sorted.length / 2)];
+                    const conserv = vals.filter(v => v >= med).length;
+                    return `${n(vals.length)} cidades analisadas · ${n(conserv)} no perfil mais conservador (terreno do discurso do LS).`;
+                }
             }
         } catch (e) { /* dados ainda não carregados → estático */ }
         return '';
@@ -917,6 +943,7 @@
             switch(mode) {
                 case 'eleicoes_2022': {
                     const data = await API.dashboard.elections2022();
+                    window._eleicoesData = data;
                     renderElectionsDashboard(data);
                     break;
                 }

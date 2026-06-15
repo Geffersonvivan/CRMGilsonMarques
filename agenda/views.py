@@ -1,10 +1,14 @@
+import math
+from datetime import date, timedelta
+
 from django.db import models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse
 from django.template.loader import render_to_string
+from django.utils import timezone
 from usuarios.views import admin_required, secao_required
-from liderancas.models import CoordenadorRegional, CaboEleitoral, Apoiador
+from liderancas.models import CoordenadorRegional, CaboEleitoral, Apoiador, Cidade
 from tarefas.models import Tarefa
 from .models import Compromisso, Evento, Roteiro, RoteiroPonto
 from .forms import CompromissoForm, EventoForm, RoteiroForm, RoteiroPontoFormSet
@@ -359,6 +363,7 @@ def api_compromissos_json(request):
             'extendedProps': {
                 'tipo': c.get_tipo_display(),
                 'status': c.get_status_display(),
+                'prioridade': c.prioridade,
                 'cidade': str(c.cidade),
                 'regiao': c.regiao.sigla,
                 'pk': c.pk,
@@ -1033,3 +1038,119 @@ def api_roteiro_construir(request):
         atual += td(hours=1, minutes=30)
 
     return JsonResponse({'ok': True, 'id': roteiro.pk, 'url': f'/agenda/roteiros/{roteiro.pk}/', 'paradas': len(ordenadas)})
+
+
+# ─── Painel estratégico da agenda ────────────────────────────────────────────
+ELEICAO_2026 = date(2026, 10, 4)  # 1º turno
+
+
+def api_estrategia_agenda(request):
+    """Cruza a agenda com a oportunidade eleitoral (déficit de penetração ×
+    tamanho do eleitorado) para dizer ONDE o LS precisa estar.
+
+    Retorna: pulso (números vivos), cobertura (alvos sem visita), burn-down
+    (ritmo necessário), alertas (órfãs/esfriando) e sugestões."""
+    hoje = timezone.localdate()
+    dias = max((ELEICAO_2026 - hoje).days, 0)
+    semanas = max(dias // 7, 1)
+    ini_sem = hoje - timedelta(days=hoje.weekday())
+    fim_sem = ini_sem + timedelta(days=6)
+
+    cidades = list(Cidade.objects.select_related('regiao').all())
+    ap = {r['cidade_id']: r['n'] for r in
+          Apoiador.objects.filter(status='ativo').values('cidade_id').annotate(n=models.Count('id'))}
+
+    comp_fut, comp_ever, cidades_mes = set(), set(), set()
+    comp_semana = 0
+    for c in Compromisso.objects.exclude(status='cancelado').only('cidade_id', 'data_hora_inicio', 'status'):
+        d = timezone.localtime(c.data_hora_inicio).date()
+        if c.cidade_id:
+            comp_ever.add(c.cidade_id)
+            if d >= hoje:
+                comp_fut.add(c.cidade_id)
+            if d.year == hoje.year and d.month == hoje.month:
+                cidades_mes.add(c.cidade_id)
+        if ini_sem <= d <= fim_sem:
+            comp_semana += 1
+    for e in Evento.objects.exclude(status='descartado').only('cidade_id', 'data', 'status'):
+        d = e.data
+        if e.cidade_id:
+            comp_ever.add(e.cidade_id)
+            if d >= hoje:
+                comp_fut.add(e.cidade_id)
+            if d.year == hoje.year and d.month == hoje.month:
+                cidades_mes.add(e.cidade_id)
+        if ini_sem <= d <= fim_sem:
+            comp_semana += 1
+
+    pens = [c.votos_sorgatto_2022 / c.eleitores for c in cidades if c.eleitores]
+    maxpen = max(pens) if pens else 1
+    tot_v = sum(c.votos_sorgatto_2022 for c in cidades)
+    tot_e = sum(c.eleitores for c in cidades) or 1
+    avg_pen = tot_v / tot_e
+
+    rows, maxopp = [], 0.0
+    for c in cidades:
+        pen = (c.votos_sorgatto_2022 / c.eleitores) if c.eleitores else 0
+        deficit = max(0.0, 1 - (pen / maxpen if maxpen else 0))
+        opp = deficit * math.sqrt(c.eleitores or 0)
+        maxopp = max(maxopp, opp)
+        rows.append({'c': c, 'pen': pen, 'opp': opp, 'ap': ap.get(c.id, 0),
+                     'fut': c.id in comp_fut, 'ever': c.id in comp_ever})
+    maxopp = maxopp or 1
+    for r in rows:
+        r['opp100'] = round(r['opp'] / maxopp * 100)
+
+    def serial(r, motivo=None):
+        c = r['c']
+        d = {'nome': c.nome, 'slug': c.slug or '', 'cidade_id': c.id,
+             'regiao': c.regiao.nome if c.regiao_id else '',
+             'eleitores': c.eleitores, 'apoiadores': r['ap'],
+             'penetracao': round(r['pen'] * 100, 1), 'opp': r['opp100']}
+        if motivo:
+            d['motivo'] = motivo
+        return d
+
+    sem_visita = sorted((r for r in rows if not r['fut']), key=lambda r: r['opp'], reverse=True)
+    prioritarias = sorted(rows, key=lambda r: r['opp'], reverse=True)[:60]
+    prio_sem_visita = [r for r in prioritarias if not r['fut']]
+    ritmo = round(len(prio_sem_visita) / semanas, 1)
+
+    sug = sorted(sem_visita, key=lambda r: r['opp'] * (1.5 if r['ap'] == 0 else 1), reverse=True)
+    sugestoes = []
+    for r in sug[:6]:
+        if r['ap'] == 0 and not r['ever']:
+            motivo = 'Nunca visitada e sem apoiadores — terreno virgem'
+        elif r['pen'] < avg_pen:
+            motivo = 'Penetração abaixo da média — muito voto a conquistar'
+        else:
+            motivo = 'Alta oportunidade e ainda sem visita marcada'
+        sugestoes.append(serial(r, motivo))
+
+    orfas = sorted((r for r in rows if r['opp100'] >= 50 and r['ap'] == 0 and not r['ever']),
+                   key=lambda r: r['opp'], reverse=True)
+    esfriando = sorted((r for r in rows if r['pen'] >= avg_pen and r['ap'] > 0 and not r['fut']),
+                       key=lambda r: r['ap'], reverse=True)
+
+    return JsonResponse({
+        'pulso': {
+            'dias': dias,
+            'compromissos_semana': comp_semana,
+            'cidades_mes': len(cidades_mes),
+            'alvos_sem_visita': len(prio_sem_visita),
+        },
+        'burndown': {
+            'prioritarias': len(prioritarias),
+            'sem_visita': len(prio_sem_visita),
+            'semanas': semanas,
+            'ritmo': ritmo,
+        },
+        'cobertura': [serial(r) for r in sem_visita[:8]],
+        'sugestoes': sugestoes,
+        'alertas': {
+            'orfas': len(orfas),
+            'esfriando': len(esfriando),
+            'orfas_lista': [serial(r) for r in orfas[:5]],
+            'esfriando_lista': [serial(r) for r in esfriando[:5]],
+        },
+    })

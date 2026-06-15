@@ -388,17 +388,11 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
 .errorlist { list-style: none; padding: 0; margin: 2px 0 0; }
 .errorlist li { font-size: 0.75rem; color: #ef4444; }
 
-/* ---------- Tooltips (from base) ---------- */
-[data-tip] { position: relative; cursor: help; }
-[data-tip]::after {
-    content: attr(data-tip); position: absolute; left: 0; top: 100%; margin-top: 6px;
-    background: #1e293b; color: #fff; font-size: 0.75rem; padding: 8px 14px;
-    border-radius: 8px; white-space: normal; max-width: 320px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 50;
-    opacity: 0; pointer-events: none; transition: opacity 0.08s ease;
-    line-height: 1.4; font-weight: 400;
-}
-[data-tip]:hover::after { opacity: 1; }
+/* ---------- Tooltips ----------
+   O balão de data-tip é renderizado pelo popover JS global em base.html
+   (segue o cursor, suporta "Título|Descrição"). O ::after antigo foi removido
+   para não duplicar o balão. */
+[data-tip] { cursor: help; }
 
 /* ---------- Seções Permitidas Grid ---------- */
 .secoes-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0 20px; }

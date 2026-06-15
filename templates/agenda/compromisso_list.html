@@ -562,8 +562,8 @@
   .fc-event.fc-prio-alta { box-shadow: inset 3px 0 0 #f59e0b; }
   .fc-event.fc-prio-alta .fc-event-title { font-weight: 700; }
 </style>
-<div class="estr" id="estrategiaPanel">
-    <div class="estr-head" onclick="document.getElementById('estrategiaPanel').classList.toggle('collapsed')">
+<div class="estr collapsed" id="estrategiaPanel">
+    <div class="estr-head" onclick="toggleEstr()">
         <span style="font-size:1.05rem;">🎯</span>
         <h3 data-tip="Estratégia da semana|Cruza a agenda com a oportunidade eleitoral (onde o LS é fraco e tem muito voto) para dizer ONDE estar. Os alvos sem visita são o que custa voto.">Estratégia da semana</h3>
         <span class="estr-sub" id="estrSub">carregando…</span>
@@ -1951,6 +1951,19 @@ window.CRM_TOUR = {
 };
 
 // ===== Painel estratégico da agenda =====
+// Vem fechado por padrão; lembra a preferência se o usuário abrir.
+function toggleEstr() {
+    const p = document.getElementById('estrategiaPanel');
+    const collapsed = p.classList.toggle('collapsed');
+    try { localStorage.setItem('estrCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+}
+(function () {
+    try {
+        if (localStorage.getItem('estrCollapsed') === '0') {
+            document.getElementById('estrategiaPanel').classList.remove('collapsed');
+        }
+    } catch (e) {}
+})();
 function agendarCidade(id) {
     const url = '{% url "agenda:compromisso_create" %}?cidade=' + id;
     if (typeof loadFormIntoModal === 'function') loadFormIntoModal(url, 'Novo Compromisso — Agendar Visita');

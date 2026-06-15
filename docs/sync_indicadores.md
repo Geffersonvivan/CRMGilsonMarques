@@ -51,6 +51,8 @@ Reais (comandos dedicados, todos rodam no sync):
   **Urbano/rural** (9923), **Idosos/Jovens** (9514), **Alfabetização** (10091).
 - **Bolsa Família** — nº real de famílias no Novo Bolsa Família por município
   (Portal da Transparência/CGU, endpoint `novo-bolsa-familia-por-municipio`, mensal).
+- **MEIs** — optantes SIMEI por município (Receita Federal/SINAC). Comando
+  `import_mei_real --arquivo mapa/data/mei_sc_*.json`.
 - **lat/lng** — centroide do geojson (`preencher_coordenadas`, sem API).
 
 > Obs.: o campo `anos_estudo_medio` passou a guardar a **taxa de alfabetização (%)**;
@@ -63,5 +65,12 @@ https://portaldatransparencia.gov.br/api-de-dados/cadastrar-email e
 `railway variables --set PORTAL_TRANSPARENCIA_TOKEN=xxxx`. O `sync_indicadores` roda o
 passo automaticamente quando o token está presente.
 
-Ainda **estimado** a partir do PIB (selo `est.` no painel):
-- **MEIs** — fonte é a Receita Federal (dump grande); segue estimado.
+**MEIs — atualização manual (sem API):** a fonte é o portal SINAC da Receita
+(ASP.NET, sem API), então o número é extraído manualmente para um arquivo e injetado:
+1. Acesse o SINAC → "Optantes por UF e Município - Simei" → tipo "Por Município",
+   informe a data consolidada, "Filtrar Municípios" → UF = SC → selecionar todos →
+   "Exibir Dados". Copie a tabela (município; total) para um JSON/CSV.
+2. `python manage.py import_mei_real --arquivo mapa/data/mei_sc_AAAA-MM.json`
+   (casa por nome normalizado; o último snapshot está em `mapa/data/`).
+
+**Todos os 9 indicadores do Perfil agora são reais.** Nenhum campo `est.` no painel.

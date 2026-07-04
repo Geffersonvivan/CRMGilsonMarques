@@ -5,12 +5,13 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
+from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from core.views import api_cidades as core_api_cidades
 from usuarios.views import secao_required
-from liderancas.models import Cidade, Regiao, CoordenadorRegional, CaboEleitoral
+from liderancas.models import Cidade, Regiao, Lideranca
 from usuarios.models import Usuario
 from .models import Tarefa, Comentario, TarefaHistorico, AnexoComentario
 from notificacoes.views import (
@@ -29,23 +30,25 @@ def _tarefas_ativas():
 
 
 def _user_can_access(user, tarefa):
-    """Verifica se o usuário pode acessar/editar a tarefa."""
+    """Verifica se o usuário pode acessar/editar a tarefa.
+    Regra: só as áreas marcadas. Nenhuma área marcada = não vê nenhuma tarefa
+    (mesmo critério das seções). Admin/superuser veem tudo."""
     if user.perfil == 'admin' or user.is_superuser:
         return True
-    return (
-        user.id == tarefa.responsavel_id
-        or user.id == tarefa.cadastrado_por_id
-        or tarefa.participantes.filter(pk=user.pk).exists()
-    )
+    areas = getattr(user, 'areas_tarefas', None) or []
+    return bool(areas) and tarefa.tipo in areas
 
 
 def _filtrar_por_usuario(queryset, user):
-    """Aplica filtro de permissão no queryset."""
+    """Aplica filtro de permissão no queryset.
+    Regra: só as áreas marcadas. Nenhuma área marcada = nenhuma tarefa visível
+    (mesmo critério das seções). Admin/superuser veem tudo."""
     if user.perfil == 'admin' or user.is_superuser:
         return queryset
-    return queryset.filter(
-        Q(responsavel=user) | Q(participantes=user) | Q(cadastrado_por=user)
-    ).distinct()
+    areas = getattr(user, 'areas_tarefas', None) or []
+    if not areas:
+        return queryset.none()
+    return queryset.filter(tipo__in=areas).distinct()
 
 
 def _registrar_historico(tarefa, user, campo, anterior, novo):
@@ -75,7 +78,7 @@ def _anotar_coordenadores_cabos(tarefas):
     regiao_ids = set(t.regiao_id for t in tarefas if t.regiao_id)
     coord_por_regiao = {}
     if regiao_ids:
-        for c in CoordenadorRegional.objects.filter(regiao_id__in=regiao_ids):
+        for c in Lideranca.objects.filter(papel='coordenador', regiao_id__in=regiao_ids):
             coord_por_regiao.setdefault(c.regiao_id, []).append(c.nome)
 
     # cabos já vem via prefetch_related('cabos')
@@ -92,8 +95,9 @@ def _anotar_coordenadores_cabos(tarefas):
 
 @secao_required('demandas:tarefas')
 def tarefa_create(request):
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
     if request.method == 'POST':
-        form = TarefaForm(request.POST)
+        form = TarefaForm(request.POST, user=request.user)
         if form.is_valid():
             tarefa = form.save(commit=False)
             tarefa.regiao = form.cleaned_data.get('regiao')
@@ -108,10 +112,22 @@ def tarefa_create(request):
                 valor_anterior='',
                 valor_novo=tarefa.titulo,
             )
+            if is_ajax:
+                return JsonResponse({'success': True})
             messages.success(request, 'Tarefa criada com sucesso.')
             return redirect('tarefas:lista')
+        if is_ajax:
+            html = render_to_string('tarefas/_tarefa_form.html', {'form': form, 'action': request.path}, request=request)
+            return JsonResponse({'success': False, 'html': html})
     else:
-        form = TarefaForm()
+        # ?prazo=YYYY-MM-DD (vindo do seletor do dia na Agenda) cai no dia escolhido
+        initial = {}
+        if request.GET.get('prazo'):
+            initial['prazo'] = request.GET['prazo']
+        form = TarefaForm(initial=initial, user=request.user)
+        if is_ajax:
+            html = render_to_string('tarefas/_tarefa_form.html', {'form': form, 'action': request.path}, request=request)
+            return JsonResponse({'html': html})
     return render(request, 'tarefas/tarefa_form.html', {
         'form': form,
         'titulo': 'Nova Tarefa',
@@ -132,7 +148,7 @@ def tarefa_edit(request, pk):
             'cidade': tarefa.cidade_id, 'prazo': str(tarefa.prazo) if tarefa.prazo else '',
             'observacoes': tarefa.observacoes,
         }
-        form = TarefaForm(request.POST, instance=tarefa)
+        form = TarefaForm(request.POST, instance=tarefa, user=request.user)
         if form.is_valid():
             tarefa = form.save(commit=False)
             tarefa.regiao = form.cleaned_data.get('regiao')
@@ -154,7 +170,7 @@ def tarefa_edit(request, pk):
             messages.success(request, 'Tarefa atualizada com sucesso.')
             return redirect('tarefas:tarefa_detail', pk=pk)
     else:
-        form = TarefaForm(instance=tarefa)
+        form = TarefaForm(instance=tarefa, user=request.user)
     return render(request, 'tarefas/tarefa_form.html', {
         'form': form,
         'titulo': f'Editar: {tarefa.titulo}',
@@ -212,6 +228,17 @@ def lista(request):
     ).order_by('first_name')
     regioes = Regiao.objects.all().order_by('sigla')
 
+    # Setores que o usuário pode escolher (admin = todos; restrito = só os seus)
+    user = request.user
+    if user.perfil == 'admin' or user.is_superuser:
+        tipo_choices = Tarefa.AREA_CHOICES
+    else:
+        areas = getattr(user, 'areas_tarefas', None) or []
+        tipo_choices = (
+            [(v, label) for v, label in Tarefa.AREA_CHOICES if v in areas]
+            if areas else Tarefa.AREA_CHOICES
+        )
+
     # Paginação
     page_number = request.GET.get('page', 1)
     per_page = request.GET.get('per_page', '50')
@@ -232,11 +259,11 @@ def lista(request):
         'per_page': per_page_atual,
         'total_tarefas': len(tarefas),
         'usuarios': usuarios,
-        'tipo_choices': Tarefa.TIPO_CHOICES,
+        'tipo_choices': tipo_choices,
         'fase_choices': Tarefa.FASE_CHOICES,
         'prioridade_choices': Tarefa.PRIORIDADE_CHOICES,
         'regioes': regioes,
-        'form': TarefaForm(),
+        'form': TarefaForm(user=request.user),
     })
 
 
@@ -245,9 +272,9 @@ def lista(request):
 @secao_required('demandas:tarefas')
 def excluidas(request):
     """List soft-deleted tasks."""
-    tarefas = list(Tarefa.objects.filter(
+    tarefas = list(_filtrar_por_usuario(Tarefa.objects.filter(
         excluida_em__isnull=False
-    ).select_related(
+    ), request.user).select_related(
         'responsavel', 'regiao', 'cidade', 'excluida_por'
     ).prefetch_related('participantes', 'cabos').order_by('-excluida_em'))
 
@@ -267,10 +294,10 @@ def excluidas(request):
 @secao_required('demandas:tarefas')
 def concluidas(request):
     """List concluded tasks."""
-    tarefas = list(Tarefa.objects.filter(
+    tarefas = list(_filtrar_por_usuario(Tarefa.objects.filter(
         fase='concluida',
         excluida_em__isnull=True,
-    ).select_related(
+    ), request.user).select_related(
         'responsavel', 'regiao', 'cidade', 'cadastrado_por'
     ).prefetch_related('participantes', 'cabos').order_by('-concluida_em'))
 
@@ -471,7 +498,7 @@ def api_tarefa_detail(request, pk):
     # Coordenador
     coord_nomes = []
     if tarefa.regiao_id:
-        coord_nomes = list(CoordenadorRegional.objects.filter(
+        coord_nomes = list(Lideranca.objects.filter(papel='coordenador',
             regiao_id=tarefa.regiao_id
         ).values_list('nome', flat=True))
 
@@ -553,7 +580,7 @@ def api_tarefa_save(request, pk):
             'data_hora_termino': str(tarefa.data_hora_termino) if tarefa.data_hora_termino else '',
             'observacoes': tarefa.observacoes,
         }
-        form = TarefaForm(request.POST, instance=tarefa)
+        form = TarefaForm(request.POST, instance=tarefa, user=request.user)
         if form.is_valid():
             tarefa = form.save(commit=False)
             tarefa.regiao = form.cleaned_data.get('regiao')
@@ -694,7 +721,7 @@ def api_tarefa_patch(request, pk):
         tarefa.refresh_from_db()
         if field == 'regiao':
             display = tarefa.regiao.sigla if tarefa.regiao else ''
-            coords = list(CoordenadorRegional.objects.filter(regiao_id=tarefa.regiao_id).values_list('nome', flat=True)) if tarefa.regiao_id else []
+            coords = list(Lideranca.objects.filter(papel='coordenador', regiao_id=tarefa.regiao_id).values_list('nome', flat=True)) if tarefa.regiao_id else []
             extra['coordenador'] = ', '.join(coords)
             extra['coord_list'] = [{'nome': n, 'initials': _iniciais(n)} for n in coords]
             extra['has_cabos'] = tarefa.cabos.exists()
@@ -882,7 +909,7 @@ api_cidades = core_api_cidades
 
 @secao_required('demandas:tarefas')
 def api_cabos_por_cidade(request, cidade_id):
-    cabos = CaboEleitoral.objects.filter(cidade_id=cidade_id).values('id', 'nome').order_by('nome')
+    cabos = Lideranca.objects.filter(papel='cabo', cidade_id=cidade_id).values('id', 'nome').order_by('nome')
     return JsonResponse(list(cabos), safe=False)
 
 
@@ -1028,146 +1055,3 @@ def api_tarefa_desagendar(request, pk):
 
     return JsonResponse({'ok': True})
 
-
-# ==================== PROMESSAS (Demandas do Eleitor) ====================
-
-from .models import Promessa
-from .forms import PromessaForm
-
-
-def _promessa_ajax(request):
-    return request.headers.get('x-requested-with') == 'XMLHttpRequest'
-
-
-@secao_required('demandas:promessas')
-def promessa_list(request):
-    import csv
-    from django.http import HttpResponse
-    qs = Promessa.objects.select_related('cidade', 'cidade__regiao').all()
-
-    busca = request.GET.get('busca', '')
-    regiao_id = request.GET.get('regiao', '')
-    cidade_id = request.GET.get('cidade', '')
-    status = request.GET.get('status', '')
-
-    if busca:
-        qs = qs.filter(
-            Q(descricao__icontains=busca) | Q(solicitante__icontains=busca) |
-            Q(responsavel__icontains=busca) | Q(bairro_linha__icontains=busca)
-        )
-    if regiao_id:
-        qs = qs.filter(cidade__regiao_id=regiao_id)
-    if cidade_id:
-        qs = qs.filter(cidade_id=cidade_id)
-    if status:
-        qs = qs.filter(status=status)
-
-    if request.GET.get('export') == 'csv':
-        resp = HttpResponse(content_type='text/csv')
-        resp['Content-Disposition'] = 'attachment; filename="promessas.csv"'
-        resp.charset = 'utf-8-sig'
-        w = csv.writer(resp)
-        w.writerow(['Demanda', 'Cidade', 'Região', 'Bairro/Linha', 'Quem pediu', 'Responsável', 'Status', 'Registro', 'Entrega', 'Observações'])
-        for p in qs:
-            w.writerow([p.descricao, p.cidade.nome, p.cidade.regiao.sigla, p.bairro_linha,
-                        p.solicitante, p.responsavel, p.get_status_display(),
-                        p.data_registro.strftime('%d/%m/%Y') if p.data_registro else '',
-                        p.data_entrega.strftime('%d/%m/%Y') if p.data_entrega else '', p.observacoes])
-        return resp
-
-    total = qs.count()
-    entregues = qs.filter(status='entregue').count()
-    pendentes = qs.exclude(status__in=['entregue', 'cancelada']).count()
-    taxa = round(entregues / (total - qs.filter(status='cancelada').count()) * 100) if (total - qs.filter(status='cancelada').count()) else 0
-
-    paginator = Paginator(qs, 50)
-    page_obj = paginator.get_page(request.GET.get('page'))
-
-    cidades_filtro = Cidade.objects.filter(regiao_id=regiao_id).order_by('nome') if regiao_id else []
-    qs_params = request.GET.copy()
-    qs_params.pop('page', None)
-
-    return render(request, 'tarefas/promessa_list.html', {
-        'page_obj': page_obj,
-        'total': total, 'entregues': entregues, 'pendentes': pendentes, 'taxa': taxa,
-        'regioes': Regiao.objects.all().order_by('sigla'),
-        'cidades_filtro': cidades_filtro,
-        'status_choices': Promessa.STATUS_CHOICES,
-        'busca': busca, 'regiao_filtro': regiao_id, 'cidade_filtro': cidade_id, 'status_filtro': status,
-        'query_string': qs_params.urlencode(),
-    })
-
-
-@secao_required('demandas:promessas')
-def promessa_create(request):
-    initial = {}
-    cidade_pre = request.GET.get('cidade')
-    if cidade_pre:
-        cid = Cidade.objects.filter(pk=cidade_pre).first()
-        if cid:
-            initial = {'cidade': cid.pk, 'regiao': cid.regiao_id}
-    if request.method == 'POST':
-        form = PromessaForm(request.POST)
-        if form.is_valid():
-            p = form.save(commit=False)
-            p.cadastrado_por = request.user
-            p.save()
-            messages.success(request, 'Promessa registrada com sucesso.')
-            if _promessa_ajax(request):
-                return JsonResponse({'ok': True})
-            return redirect('tarefas:promessa_list')
-    else:
-        form = PromessaForm(initial=initial)
-    if _promessa_ajax(request):
-        return render(request, 'liderancas/_form_fields.html', {'form': form})
-    return render(request, 'tarefas/promessa_form.html', {'form': form, 'titulo': 'Nova Promessa'})
-
-
-@secao_required('demandas:promessas')
-def promessa_edit(request, pk):
-    p = get_object_or_404(Promessa, pk=pk)
-    if request.method == 'POST':
-        form = PromessaForm(request.POST, instance=p)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Promessa atualizada com sucesso.')
-            if _promessa_ajax(request):
-                return JsonResponse({'ok': True})
-            return redirect('tarefas:promessa_list')
-    else:
-        form = PromessaForm(instance=p)
-    if _promessa_ajax(request):
-        return render(request, 'liderancas/_form_fields.html', {'form': form})
-    return render(request, 'tarefas/promessa_form.html', {'form': form, 'titulo': f'Editar: {p.descricao}'})
-
-
-@secao_required('demandas:promessas')
-@require_POST
-def promessa_delete(request, pk):
-    p = get_object_or_404(Promessa, pk=pk)
-    p.delete()
-    messages.success(request, 'Promessa removida.')
-    return redirect('tarefas:promessa_list')
-
-
-@secao_required('demandas:promessas')
-@require_POST
-def promessa_gerar_tarefa(request, pk):
-    """Cria uma Tarefa de entrega vinculada à promessa."""
-    p = get_object_or_404(Promessa, pk=pk)
-    t = Tarefa.objects.create(
-        titulo=f'Entregar: {p.descricao}',
-        descricao=f'Demanda de {p.solicitante or "eleitor"} em {p.cidade.nome}'
-                  + (f' ({p.bairro_linha})' if p.bairro_linha else ''),
-        tipo='articulacao',
-        fase='a_fazer',
-        prioridade='alta',
-        regiao=p.cidade.regiao,
-        cidade=p.cidade,
-        observacoes=p.observacoes,
-        cadastrado_por=request.user,
-    )
-    if p.status == 'registrada':
-        p.status = 'em_andamento'
-        p.save(update_fields=['status'])
-    return JsonResponse({'ok': True, 'tarefa_id': t.id, 'url': f'/tarefas/{t.id}/'})

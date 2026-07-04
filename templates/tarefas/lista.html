@@ -91,13 +91,12 @@
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         padding: 0 2px;
     }
-    .badge-tipo.reuniao { background: #0073ea; }
-    .badge-tipo.evento { background: #e2445c; }
-    .badge-tipo.visita { background: #a25ddc; }
-    .badge-tipo.articulacao { background: #ff642e; }
-    .badge-tipo.comunicacao { background: #00c875; }
-    .badge-tipo.captacao { background: #fdab3d; }
-    .badge-tipo.outro { background: #c4c4c4; }
+    .badge-tipo.financeiro { background: #15803d; }
+    .badge-tipo.administrativo { background: #64748b; }
+    .badge-tipo.comunicacao { background: #7c3aed; }
+    .badge-tipo.mobilizacao { background: #FF6B00; }
+    .badge-tipo.estrategico { background: #1e3a8a; }
+    .badge-tipo.eventos { background: #d97706; }
 
     /* Status badge — fills entire cell */
     .badge-fase {
@@ -874,6 +873,14 @@
         <option value="{{ val }}">{{ label }}</option>
         {% endfor %}
     </select>
+    {% if tipo_choices|length > 1 %}
+    <select id="filtroArea" onchange="filtrarLinhas()">
+        <option value="">Todas as áreas</option>
+        {% for val, label in tipo_choices %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
     <select id="filtroResponsavel" onchange="filtrarLinhas()">
         <option value="">Todos responsáveis</option>
         {% for u in usuarios %}
@@ -912,7 +919,7 @@
         <thead>
             <tr>
                 <th style="width:22%;">Atividade</th>
-                <th style="width:8%;">Tipo</th>
+                <th style="width:8%;">Área</th>
                 <th style="width:3%;">Resp.</th>
                 <th style="width:5%;">Partic.</th>
                 <th style="width:5%;">H. início</th>
@@ -933,6 +940,7 @@
                 data-fase="{{ t.fase }}"
                 data-responsavel="{{ t.responsavel_id|default:'' }}"
                 data-prioridade="{{ t.prioridade }}"
+                data-tipo="{{ t.tipo }}"
                 data-regiao="{{ t.regiao_id|default:'' }}"
                 data-cidade="{{ t.cidade_id|default:'' }}"
                 data-cabos="{% for c in t.cabos.all %}{{ c.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
@@ -1148,7 +1156,7 @@
                         <div class="modal-prop-value" id="modalFase" onclick="modalPopover(event,'fase')"></div>
                     </div>
                     <div class="modal-prop">
-                        <span class="modal-prop-label">Tipo</span>
+                        <span class="modal-prop-label">Área</span>
                         <div class="modal-prop-value" id="modalTipo" onclick="modalPopover(event,'tipo')"></div>
                     </div>
                     <div class="modal-prop">
@@ -3183,7 +3191,7 @@ function renderHistory(historico) {
     }
 
     const FIELD_LABELS = {
-        fase: 'Status', tipo: 'Tipo', prioridade: 'Prioridade',
+        fase: 'Status', tipo: 'Área', prioridade: 'Prioridade',
         responsavel: 'Responsável', participantes: 'Participantes',
         regiao: 'Região', cidade: 'Cidade', cabos: 'Cabos Eleitorais',
         prazo: 'Prazo', data_hora_inicio: 'Hora início', data_hora_termino: 'Hora término',
@@ -3399,12 +3407,15 @@ function filtrarLinhas() {
     const fase = document.getElementById('filtroFase').value;
     const resp = document.getElementById('filtroResponsavel').value;
     const prio = document.getElementById('filtroPrioridade').value;
+    const areaEl = document.getElementById('filtroArea');
+    const area = areaEl ? areaEl.value : '';
     document.querySelectorAll('#tableBody tr[data-id]').forEach(row => {
         let v = true;
         if (busca && !row.dataset.titulo.includes(busca)) v = false;
         if (fase && row.dataset.fase !== fase) v = false;
         if (resp && row.dataset.responsavel !== resp) v = false;
         if (prio && row.dataset.prioridade !== prio) v = false;
+        if (area && row.dataset.tipo !== area) v = false;
         row.style.display = v ? '' : 'none';
     });
     // Persist to URL
@@ -3413,6 +3424,7 @@ function filtrarLinhas() {
     if (fase) params.set('fase', fase);
     if (resp) params.set('resp', resp);
     if (prio) params.set('prio', prio);
+    if (area) params.set('area', area);
     const qs = params.toString();
     const newUrl = window.location.pathname + (qs ? '?' + qs : '');
     history.replaceState(null, '', newUrl);
@@ -3422,6 +3434,8 @@ function limparFiltros() {
     document.getElementById('filtroFase').value = '';
     document.getElementById('filtroResponsavel').value = '';
     document.getElementById('filtroPrioridade').value = '';
+    const areaEl = document.getElementById('filtroArea');
+    if (areaEl) areaEl.value = '';
     filtrarLinhas();
 }
 // Restore filters from URL on load
@@ -3431,6 +3445,8 @@ function limparFiltros() {
     if (params.get('fase')) document.getElementById('filtroFase').value = params.get('fase');
     if (params.get('resp')) document.getElementById('filtroResponsavel').value = params.get('resp');
     if (params.get('prio')) document.getElementById('filtroPrioridade').value = params.get('prio');
+    const areaEl = document.getElementById('filtroArea');
+    if (areaEl && params.get('area')) areaEl.value = params.get('area');
     if (params.toString()) filtrarLinhas();
 })();
 

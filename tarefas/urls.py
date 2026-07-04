@@ -10,12 +10,6 @@ urlpatterns = [
     path('<int:pk>/editar/', views.tarefa_edit, name='tarefa_edit'),
     path('<int:pk>/excluir/', views.tarefa_delete, name='tarefa_delete'),
     path('excluidas/', views.excluidas, name='excluidas'),
-    # Promessas / demandas do eleitor
-    path('promessas/', views.promessa_list, name='promessa_list'),
-    path('promessas/nova/', views.promessa_create, name='promessa_create'),
-    path('promessas/<int:pk>/editar/', views.promessa_edit, name='promessa_edit'),
-    path('promessas/<int:pk>/excluir/', views.promessa_delete, name='promessa_delete'),
-    path('promessas/<int:pk>/gerar-tarefa/', views.promessa_gerar_tarefa, name='promessa_gerar_tarefa'),
     path('concluidas/', views.concluidas, name='concluidas'),
     # APIs
     path('api/mover/', views.api_mover, name='api_mover'),

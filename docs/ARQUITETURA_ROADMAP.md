@@ -119,7 +119,13 @@ Cada fase tem **objetivo · passos · como · pronto quando**. As fases são seq
 não começar a Fase N+1 com a N pela metade (evita instabilidade em base de campanha em
 uso). Fases 0 e 1 são "agora"; 2 é "logo em seguida"; 3 é "depois dos 3 eleitos".
 
-### Fase 0 — Higiene (pré-requisito imediato)
+### Fase 0 — Higiene (pré-requisito imediato) ✅ concluída em 04/07/2026
+
+> Feita na `rebranding-isadora`: 15 commits temáticos (higiene → rename do módulo →
+> remoção de Doações → unificação de Lideranças → PWA → Agenda → Usuários → Tarefas →
+> Notificações → Mapa → Home/capa → Oportunidades → identidade CAMPANHA → docs).
+> `git status` limpo, `manage.py check` e `makemigrations --check` sem pendências,
+> planilha com PII e patch de sessão no `.gitignore`.
 
 **Objetivo:** transformar o trabalho local não commitado em histórico versionado e
 seguro, sem tocar em produção. Nada de refatorar antes de ter rede de segurança.

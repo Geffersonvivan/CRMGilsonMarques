@@ -3,8 +3,8 @@
 {% block extra_css %}
 <style>
     .actions { display: flex; gap: 4px; }
-    .obs-link { color: #002776; cursor: pointer; text-decoration: underline dotted; }
-    .obs-link:hover { color: #003da5; }
+    .obs-link { color: #FF6B00; cursor: pointer; text-decoration: underline dotted; }
+    .obs-link:hover { color: #E25E00; }
     .pagination-info { text-align: center; font-size: 0.78rem; color: #64748b; padding-bottom: 12px; }
     .pagination .disabled { color: #cbd5e1; cursor: default; }
     .pagination .disabled:hover { background: transparent; border-color: #e2e8f0; }
@@ -37,6 +37,8 @@
 {% endblock %}
 
 {% block content %}
+
+{% include 'agenda/_section_nav.html' %}
 
 <div class="page-header">
     <h1 class="page-title" data-tip="Eventos externos da comunidade que o candidato pode participar. Inaugurações, festas, encontros, feiras, etc.">Eventos <span class="page-subtitle">{{ total }} registros</span></h1>

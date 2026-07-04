@@ -6,11 +6,26 @@
 <style>
     /* ---- Layout full-height ---- */
     .agenda-wrapper { display: flex; flex-direction: column; height: calc(100vh - 60px); }
-    .page-header { padding-bottom: 16px; flex-shrink: 0; }
-    .header-actions { display: flex; gap: 8px; align-items: center; }
-    .toggle-group { display: flex; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #f8fafc; }
-    .toggle-group .btn { border-radius: 0; border: none; padding: 6px 16px; background: transparent; color: #64748b; font-weight: 500; }
-    .toggle-group .btn.active { background: #002776; color: #fff; }
+    /* Cabeçalho em UMA linha: abas (Agenda/Eventos/Roteiros) à esquerda + ações à direita */
+    .agenda-topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 12px; flex-shrink: 0; }
+    .agenda-topbar .agenda-secnav { margin-bottom: 0; }
+    .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .header-actions .btn { height: 34px; padding: 0 13px; border-radius: 9px; font-size: .8rem; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 6px; line-height: 1;
+        transition: background .14s, box-shadow .14s, transform .1s, border-color .14s; }
+    .header-actions .btn svg { width: 14px; height: 14px; }
+    .header-actions .btn:active { transform: scale(.98); }
+    .toggle-group { display: flex; gap: 2px; padding: 2px; height: 34px; border: 1px solid #e6e9f0; border-radius: 9px; background: #f1f4f9; }
+    .toggle-group .btn { height: auto; border-radius: 7px; padding: 0 13px; background: transparent; color: #64748b; font-weight: 600; box-shadow: none; }
+    .toggle-group .btn:hover { color: #FF6B00; }
+    .toggle-group .btn.active { background: #FF6B00; color: #fff; box-shadow: 0 2px 6px -2px rgba(255, 107, 0,.5); }
+    .header-actions .btn-outline { border: 1px solid #e3e8f1; background: #fff; color: #475569; }
+    .header-actions .btn-outline:hover { border-color: #FF6B00; color: #FF6B00; }
+    .header-actions .btn-primary { background: #FF6B00; color: #fff; box-shadow: 0 5px 12px -7px rgba(255, 107, 0,.9); }
+    .header-actions .btn-primary:hover { background: #E25E00; }
+    .header-actions .btn-whatsapp { box-shadow: 0 5px 12px -7px rgba(37,211,102,.8); }
+    .novo-wrap { position: relative; }
+    .novo-wrap .caret { width: 11px; height: 11px; opacity: .85; margin-left: -1px; }
 
     /* ---- Calendário container ---- */
     .calendar-container { flex: 1; min-height: 0; background: #fff; border: 1px solid #ecedf0; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; }
@@ -95,6 +110,8 @@
     /* ---- Tarefa events — dashed border style ---- */
     .fc .fc-tarefa-event { border: 1.5px dashed !important; background: rgba(255,255,255,0.85) !important; opacity: 0.9; }
     .fc .fc-tarefa-event .fc-event-title { color: #334155 !important; font-weight: 500; font-size: 0.68rem; }
+    /* Título da tarefa (render custom .fc-ev-title) escuro sobre o fundo branco tracejado */
+    .fc .fc-tarefa-event .fc-ev-title { color: #334155 !important; font-weight: 600; }
     .fc .fc-tarefa-event.fc-tarefa-vencida { background: #fef2f2 !important; }
     .fc .fc-tarefa-event { cursor: pointer; }
 
@@ -136,8 +153,9 @@
     .tarefas-popover-backdrop { position: fixed; inset: 0; z-index: 1099; }
 
     /* Toggle tarefas */
-    .tarefas-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: #64748b; cursor: pointer; user-select: none; margin-left: 12px; }
-    .tarefas-toggle input { accent-color: #3b82f6; margin: 0; }
+    .fc .fc-toolbar-chunk { display: flex; align-items: center; }
+    .tarefas-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: #64748b; cursor: pointer; user-select: none; margin-left: 12px; line-height: 1; }
+    .tarefas-toggle input { accent-color: #3b82f6; margin: 0; vertical-align: middle; }
 
     /* Follow-up section */
     .gcal-followup-header { margin-bottom: 6px; }
@@ -159,7 +177,8 @@
     .fc .fc-daygrid-more-link:hover { background: #e6f0ff; }
 
     /* Time grid (week view) */
-    .fc .fc-timegrid-slot { height: 44px; border-color: #f0f1f3; }
+    /* Slots mais compactos: menos rolagem, cabe na tela (calendário compacto) */
+    .fc .fc-timegrid-slot { height: 1.6em; border-color: #f0f1f3; }
     .fc .fc-timegrid-slot-label { font-size: 0.7rem; color: #676879; font-weight: 500; }
     .fc .fc-timegrid-event {
         border-radius: 8px; border: none; font-size: 0.75rem;
@@ -190,7 +209,7 @@
     .modal-panel {
         background: #fff; z-index: 1001; border-radius: 16px;
         box-shadow: 0 24px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04);
-        width: 500px; max-width: 94vw; max-height: 88vh;
+        width: 680px; max-width: 94vw; max-height: 90vh;
         display: flex; flex-direction: column;
         transform: scale(0.95); opacity: 0;
         transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s;
@@ -208,11 +227,39 @@
     }
     .modal-close:hover { background: #f5f6f8; color: #323338; }
     .modal-body {
-        flex: 1; overflow-y: auto; padding: 0 20px;
+        flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 24px 20px;
         display: flex; flex-direction: column;
     }
     .modal-body::-webkit-scrollbar { width: 4px; }
     .modal-body::-webkit-scrollbar-thumb { background: #d0d4e4; border-radius: 3px; }
+    /* Impede overflow horizontal do form de 2 colunas dentro do modal */
+    #modalBody .form-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 18px; }
+    #modalBody .form-group.full { grid-column: 1 / -1; }
+    #modalBody input:not([type="checkbox"]):not([type="radio"]),
+    #modalBody select, #modalBody textarea, #modalBody .form-input {
+        width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;
+    }
+    #modalBody input[type="checkbox"], #modalBody input[type="radio"] {
+        width: auto; min-width: 0; flex: 0 0 auto; margin: 0;
+    }
+    #modalBody .form-actions { margin-top: 4px; }
+
+    /* ---- Seletor de hora estilo Google Agenda ---- */
+    .tc-menu {
+        position: fixed; z-index: 9999;
+        max-height: 240px; overflow-y: auto;
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 4px 0;
+        min-width: 120px;
+    }
+    .tc-menu[hidden] { display: none; }
+    .tc-opt {
+        display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
+        padding: 7px 14px; font-size: .85rem; color: #1e293b; cursor: pointer; white-space: nowrap;
+    }
+    .tc-opt:hover, .tc-opt.hl { background: #eef2ff; }
+    .tc-opt.sel { font-weight: 700; color: var(--navy); }
+    .tc-dur { color: #94a3b8; font-size: .76rem; }
 
     /* ---- Google Calendar style form ---- */
     #compromisso-modal-form {
@@ -356,7 +403,7 @@
     .contato-item { font-size: 0.72rem; color: #374151; padding: 1px 0; }
     .contato-item-check { display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 4px; padding: 2px 4px; }
     .contato-item-check:hover { background: #eef4ff; }
-    .contato-item-check input { accent-color: #002776; cursor: pointer; }
+    .contato-item-check input { accent-color: #FF6B00; cursor: pointer; }
     .contatos-hint { font-weight: 400; color: #94a3b8; font-size: 0.66rem; }
     .contato-item-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .sug-badge { font-size: 0.62rem; font-weight: 700; padding: 1px 7px; border-radius: 9px; flex-shrink: 0; }
@@ -490,8 +537,8 @@
 {% block content %}
 <div class="agenda-wrapper">
 
-<div class="page-header">
-    <h1 class="page-title" data-tip="Calendário de compromissos do candidato: reuniões, visitas, comícios, entrevistas e eventos.">Agenda</h1>
+<div class="agenda-topbar">
+    {% include 'agenda/_section_nav.html' %}
     <div class="header-actions">
         <div class="toggle-group">
             <button class="btn active" id="btn-calendar" onclick="toggleView('calendar')" data-tip="Visão de calendário|Mostra os compromissos no mês, dia a dia.">Calendário</button>
@@ -519,62 +566,82 @@
                 </div>
             </div>
         </div>
-        <button class="btn btn-primary" onclick="openCreate()" data-tip="Novo compromisso|Cria uma reunião, visita, comício ou evento na agenda.">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Novo Compromisso
+        <div class="novo-wrap">
+            <button class="btn btn-primary" id="novoBtn" onclick="toggleNovoMenu(event)" data-tip="Novo|Compromisso, roteiro, evento ou tarefa.">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Novo
+                <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Menu "+ Novo": os 4 serviços (mesmo estilo do seletor do dia) -->
+    <div class="day-menu" id="novoMenu" role="menu">
+        <div class="day-menu-head">Criar novo</div>
+        <button type="button" class="dm-comp" onclick="novoPick('compromisso')" role="menuitem">
+            <span class="dm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+            <span>Compromisso<span class="dm-sub">Reunião, visita, comício…</span></span>
         </button>
+        {% if user.perfil == 'admin' or user.is_superuser or 'demandas' in user.secoes_permitidas or 'demandas:roteiros' in user.secoes_permitidas %}
+        <button type="button" class="dm-rot" onclick="novoPick('roteiro')" role="menuitem">
+            <span class="dm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h6a3 3 0 0 0 3-3V8"/></svg></span>
+            <span>Roteiro<span class="dm-sub">Do dia de hoje</span></span>
+        </button>
+        {% endif %}
+        {% if user.perfil == 'admin' or user.is_superuser or 'demandas' in user.secoes_permitidas or 'demandas:eventos' in user.secoes_permitidas %}
+        <button type="button" class="dm-evt" onclick="novoPick('evento')" role="menuitem">
+            <span class="dm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
+            <span>Evento<span class="dm-sub">Comício, carreata, ato público</span></span>
+        </button>
+        {% endif %}
+        {% if user.perfil == 'admin' or user.is_superuser or 'demandas' in user.secoes_permitidas or 'demandas:tarefas' in user.secoes_permitidas %}
+        <button type="button" class="dm-tar" onclick="novoPick('tarefa')" role="menuitem">
+            <span class="dm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+            <span>Tarefa<span class="dm-sub">A fazer, com prazo</span></span>
+        </button>
+        {% endif %}
     </div>
 </div>
 
 <!-- 🎯 Painel estratégico da agenda -->
 <style>
-  .estr { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:14px 18px; margin-bottom:14px; box-shadow:0 1px 3px rgba(15,23,42,.05); }
-  .estr-head { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
-  .estr-head h3 { font-size:.92rem; font-weight:800; color:#0f172a; margin:0; }
-  .estr-head .estr-sub { font-size:.72rem; color:#94a3b8; font-weight:500; }
-  .estr-head .estr-chev { margin-left:auto; color:#94a3b8; transition:transform .15s; }
-  .estr.collapsed .estr-body { display:none; }
-  .estr.collapsed .estr-chev { transform:rotate(-90deg); }
-  .estr-body { margin-top:12px; }
-  .estr-pulse { display:flex; gap:10px; flex-wrap:wrap; }
-  .estr-card { flex:1; min-width:120px; background:#f8fafc; border:1px solid #eef2f7; border-radius:10px; padding:9px 12px; }
-  .estr-card .v { font-size:1.35rem; font-weight:800; color:#0f172a; line-height:1; }
-  .estr-card .l { font-size:.68rem; color:#64748b; text-transform:uppercase; letter-spacing:.4px; margin-top:3px; }
-  .estr-card.alvo .v { color:#b91c1c; }
-  .estr-ritmo { margin:12px 0 4px; font-size:.82rem; color:#334155; background:#fff7ed; border:1px solid #fed7aa; border-radius:9px; padding:8px 12px; }
-  .estr-ritmo b { color:#9a3412; }
-  .estr-cols { display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-top:12px; }
-  @media (max-width:900px){ .estr-cols{ grid-template-columns:1fr; } }
-  .estr-sec-t { font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:#475569; margin-bottom:7px; }
-  .estr-item { display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #f1f5f9; }
-  .estr-rank { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-  .estr-item .nm { font-weight:700; color:#1e293b; font-size:.82rem; }
-  .estr-item .meta { font-size:.7rem; color:#94a3b8; }
-  .estr-item .grow { flex:1; min-width:0; }
-  .estr-btn { font-size:.7rem; font-weight:700; border:1px solid #1e40af; color:#1e40af; background:#fff; border-radius:7px; padding:4px 10px; cursor:pointer; white-space:nowrap; }
-  .estr-btn:hover { background:#1e40af; color:#fff; }
-  .estr-alert { display:flex; align-items:center; gap:7px; font-size:.78rem; padding:6px 0; color:#334155; }
-  .estr-badge { font-size:.66rem; font-weight:800; border-radius:6px; padding:2px 7px; }
-  .estr-badge.orf { background:#fef2f2; color:#b91c1c; }
-  .estr-badge.esf { background:#fff7ed; color:#9a3412; }
-  .estr-loading { color:#94a3b8; font-size:.8rem; padding:6px 0; }
   /* Realce de compromisso de prioridade alta no calendário */
   .fc-event.fc-prio-alta { box-shadow: inset 3px 0 0 #f59e0b; }
   .fc-event.fc-prio-alta .fc-event-title { font-weight: 700; }
+  /* Roteiros e tarefas (dia inteiro) legíveis — não ficam mais como fio fino */
+  .fc-daygrid-event { padding: 3px 7px; margin: 1px 2px; font-size: .74rem; line-height: 1.3; border-radius: 6px; min-height: 20px; }
+  .fc-daygrid-event .fc-event-title { font-weight: 600; white-space: normal; overflow: hidden; }
+  .fc-daygrid-event .fc-event-time { font-weight: 600; }
+  /* Faixa "Dia todo" com um respiro a mais na visão semana/dia */
+  .fc-timegrid-axis-frame { align-items: flex-start; }
+  .fc .fc-daygrid-body .fc-daygrid-day-events { min-height: 2px; }
 </style>
-<div class="estr collapsed" id="estrategiaPanel">
-    <div class="estr-head" onclick="toggleEstr()">
-        <span style="font-size:1.05rem;">🎯</span>
-        <h3 data-tip="Estratégia da semana|Cruza a agenda com a oportunidade eleitoral (onde o LS é fraco e tem muito voto) para dizer ONDE estar. Os alvos sem visita são o que custa voto.">Estratégia da semana</h3>
-        <span class="estr-sub" id="estrSub">carregando…</span>
-        <svg class="estr-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-    </div>
-    <div class="estr-body" id="estrBody">
-        <div class="estr-loading">Calculando onde investir o tempo do candidato…</div>
-    </div>
-</div>
 
+<style>
+    .cal-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center;
+        margin: 0 0 10px; padding: 8px 14px; background: #fff; border: 1px solid #eef0f4; border-radius: 10px; }
+    .cal-legend .cl-t { font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8; margin-right: 2px; }
+    .cal-leg { display: inline-flex; align-items: center; gap: 7px; font-size: .74rem; font-weight: 600; color: #475569; }
+    .cal-leg i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+    /* Blocos centralizados nos eventos da visão semana/dia (time-grid) */
+    .fc-timegrid-event .fc-event-main { display: flex; }
+    .fc-ev-custom { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; overflow: hidden; padding: 4px 6px; line-height: 1.2; }
+    .fc-ev-custom .fc-ev-title { font-weight: 700; font-size: .74rem; white-space: normal; letter-spacing: .1px; }
+    .fc-ev-custom .fc-ev-time { font-size: .67rem; opacity: .9; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    /* Roteiros/tarefas (dia inteiro) legíveis: título numa linha só, com reticências */
+    .fc-ev-allday { padding: 1px 6px; overflow: hidden; }
+    .fc-ev-allday .fc-ev-title { font-weight: 600; font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
 <div class="calendar-container" id="calendar-view">
+    <div class="cal-legend">
+        <span class="cl-t">Legenda</span>
+        <span class="cal-leg"><i style="background:#FF6B00"></i> Compromisso</span>
+        <span class="cal-leg"><i style="background:#C44B00"></i> Evento</span>
+        <span class="cal-leg"><i style="background:#7c3aed"></i> Roteiro</span>
+        <span class="cal-leg"><i style="background:#0d9488"></i> Tarefa</span>
+        <span class="cal-leg"><i style="background:#ef4444"></i> Tarefa atrasada</span>
+    </div>
     <div id="calendar"></div>
 </div>
 
@@ -709,6 +776,54 @@
         </div>
     </div>
 </div>
+
+<!-- Mini-seletor ao clicar num dia: o que criar neste dia -->
+<style>
+    .day-menu { position: fixed; z-index: 9000; background: #fff; border: 1px solid #e5e8f0;
+        border-radius: 12px; box-shadow: 0 14px 36px rgba(15,23,42,.18); padding: 6px; min-width: 210px;
+        display: none; animation: dmIn .12s ease; }
+    .day-menu.open { display: block; }
+    @keyframes dmIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .day-menu-head { font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+        color: #94a3b8; padding: 7px 10px 5px; }
+    .day-menu button { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+        background: none; border: none; padding: 10px; border-radius: 9px; font-size: .88rem; font-weight: 600;
+        color: #1e293b; cursor: pointer; transition: background .12s, color .12s; }
+    .day-menu button:hover { background: #eef3fb; color: #FF6B00; }
+    .day-menu button .dm-ico { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center;
+        justify-content: center; flex-shrink: 0; }
+    .day-menu button .dm-ico svg { width: 16px; height: 16px; }
+    .day-menu .dm-comp .dm-ico { background: #e9f0ff; color: #FF6B00; }
+    .day-menu .dm-rot  .dm-ico { background: #f3edfd; color: #7c3aed; }
+    .day-menu .dm-evt  .dm-ico { background: #fdf3d6; color: #b8860b; }
+    .day-menu .dm-tar  .dm-ico { background: #e6f6f1; color: #0d9488; }
+    .day-menu .dm-sub { display: block; font-size: .68rem; font-weight: 500; color: #94a3b8; margin-top: 1px; }
+</style>
+<div class="day-menu" id="dayMenu" role="menu">
+    <div class="day-menu-head" id="dayMenuHead">Novo neste dia</div>
+    <button type="button" class="dm-comp" onclick="dayMenuPick('compromisso')" role="menuitem">
+        <span class="dm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+        <span>Compromisso<span class="dm-sub">Reunião, visita, comício…</span></span>
+    </button>
+    {% if user.perfil == 'admin' or user.is_superuser or 'demandas' in user.secoes_permitidas or 'demandas:roteiros' in user.secoes_permitidas %}
+    <button type="button" class="dm-rot" onclick="dayMenuPick('roteiro')" role="menuitem">
+        <span class="dm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h6a3 3 0 0 0 3-3V8"/></svg></span>
+        <span>Roteiro do dia<span class="dm-sub">Sequência de paradas + rota</span></span>
+    </button>
+    {% endif %}
+    {% if user.perfil == 'admin' or user.is_superuser or 'demandas' in user.secoes_permitidas or 'demandas:eventos' in user.secoes_permitidas %}
+    <button type="button" class="dm-evt" onclick="dayMenuPick('evento')" role="menuitem">
+        <span class="dm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
+        <span>Evento<span class="dm-sub">Comício, carreata, ato público</span></span>
+    </button>
+    {% endif %}
+    {% if user.perfil == 'admin' or user.is_superuser or 'demandas' in user.secoes_permitidas or 'demandas:tarefas' in user.secoes_permitidas %}
+    <button type="button" class="dm-tar" onclick="dayMenuPick('tarefa')" role="menuitem">
+        <span class="dm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+        <span>Tarefa<span class="dm-sub">A fazer, com prazo neste dia</span></span>
+    </button>
+    {% endif %}
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -820,6 +935,9 @@ function initModalForm() {
     const form = document.getElementById('compromisso-modal-form');
     if (!form) return;
 
+    // Remove menus de hora órfãos de uma abertura anterior do modal.
+    document.querySelectorAll('body > .tc-menu').forEach(el => el.remove());
+
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         const formData = new FormData(form);
@@ -915,6 +1033,23 @@ function initModalForm() {
         window._prefillDate = null;
     }
 
+    // Seletor de hora estilo Google Agenda (digitável + lista filtrável + duração)
+    // e sincronização fim = início + 1h (sem sobrescrever fim ajustado à mão).
+    const hiSync = form.querySelector('[name="hora_inicio"]');
+    const hfSync = form.querySelector('[name="hora_fim"]');
+    if (hiSync && hfSync) {
+        setupTimeCombo(hiSync, null);
+        setupTimeCombo(hfSync, () => tcParse(hiSync.value));
+        hiSync.addEventListener('change', () => {
+            const ini = tcParse(hiSync.value);
+            if (ini === null) return;
+            const fim = tcParse(hfSync.value);
+            if (fim === null || fim <= ini) {
+                hfSync.value = tcFmt(Math.min(ini + 60, 23 * 60 + 45));
+            }
+        });
+    }
+
     // Load tarefas checklist (editing mode)
     const pkMatch = form.action.match(/(\d+)\/editar/);
     if (pkMatch) {
@@ -931,6 +1066,112 @@ function initModalForm() {
         toggleFollowup();
         statusSelect.addEventListener('change', toggleFollowup);
     }
+}
+
+// ==== Seletor de hora estilo Google Agenda ====
+function tcFmt(mins) {
+    const p = n => String(n).padStart(2, '0');
+    return `${p(Math.floor(mins / 60))}:${p(mins % 60)}`;
+}
+// Aceita "8", "830", "8:30", "8h30", "8 30", "8:5", "8pm", "8:30 am" → minutos do dia.
+function tcParse(s) {
+    s = (s || '').trim().toLowerCase();
+    if (!s) return null;
+    let ampm = null;
+    const am = s.match(/([ap])\.?m?\.?$/);
+    if (am) { ampm = am[1]; s = s.slice(0, am.index).trim(); }
+    s = s.replace(/[h.\s]+/g, ':').replace(/:+$/, '');
+    let h, m;
+    if (s.includes(':')) {
+        const p = s.split(':'); h = parseInt(p[0], 10); m = parseInt(p[1] || '0', 10);
+    } else {
+        const d = s.replace(/\D/g, '');
+        if (!d) return null;
+        if (d.length <= 2) { h = parseInt(d, 10); m = 0; }
+        else { h = parseInt(d.slice(0, d.length - 2), 10); m = parseInt(d.slice(-2), 10); }
+    }
+    if (isNaN(h)) return null;
+    if (isNaN(m)) m = 0;
+    if (ampm === 'p' && h < 12) h += 12;
+    if (ampm === 'a' && h === 12) h = 0;
+    if (h > 23 || m > 59) return null;
+    return h * 60 + m;
+}
+
+function setupTimeCombo(input, getRefMinutes) {
+    input.setAttribute('autocomplete', 'off');
+    const menu = document.createElement('div');
+    menu.className = 'tc-menu';
+    menu.hidden = true;
+    document.body.appendChild(menu);       // no body p/ não ser cortado pelo overflow do modal
+    let opts = [], active = -1;
+
+    function durLabel(mins) {
+        const ref = getRefMinutes ? getRefMinutes() : null;
+        if (ref == null) return '';
+        let d = mins - ref;
+        if (d <= 0) return '';
+        const h = Math.floor(d / 60), mm = d % 60;
+        return h && mm ? `${h} h ${mm} min` : h ? `${h} h` : `${mm} min`;
+    }
+    function position() {
+        const r = input.getBoundingClientRect();
+        menu.style.left = r.left + 'px';
+        menu.style.top = (r.bottom + 2) + 'px';
+        menu.style.minWidth = r.width + 'px';
+    }
+    function render() {
+        const cur = tcParse(input.value);
+        const q = input.value.trim().replace(/[^0-9]/g, '');
+        const all = [];
+        for (let m = 0; m < 24 * 60; m += 15) all.push(m);
+        let list = all;
+        if (q) {
+            list = all.filter(m => tcFmt(m).replace(':', '').startsWith(q));
+            if (!list.length) list = all;
+        }
+        opts = list; active = -1;
+        menu.innerHTML = '';
+        list.forEach(m => {
+            const o = document.createElement('div');
+            o.className = 'tc-opt' + (cur === m ? ' sel' : '');
+            const dl = durLabel(m);
+            o.innerHTML = `<span>${tcFmt(m)}</span>${dl ? `<span class="tc-dur">${dl}</span>` : ''}`;
+            o.addEventListener('mousedown', e => { e.preventDefault(); choose(m); });
+            menu.appendChild(o);
+        });
+        const sel = menu.querySelector('.tc-opt.sel');
+        menu.scrollTop = sel ? Math.max(0, sel.offsetTop - 80) : 0;
+    }
+    function open() { position(); render(); menu.hidden = false; }
+    function close() { menu.hidden = true; }
+    function choose(m) { input.value = tcFmt(m); close(); input.dispatchEvent(new Event('change', { bubbles: true })); }
+    function hl() {
+        const items = menu.querySelectorAll('.tc-opt');
+        items.forEach((it, i) => it.classList.toggle('hl', i === active));
+        if (items[active]) items[active].scrollIntoView({ block: 'nearest' });
+    }
+
+    input.addEventListener('focus', open);
+    input.addEventListener('click', open);
+    input.addEventListener('input', () => { if (menu.hidden) { position(); menu.hidden = false; } render(); });
+    input.addEventListener('keydown', e => {
+        if (menu.hidden && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { open(); return; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); active = Math.min(active + 1, opts.length - 1); hl(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(active - 1, 0); hl(); }
+        else if (e.key === 'Enter') {
+            if (!menu.hidden) {
+                e.preventDefault();
+                if (active >= 0) choose(opts[active]);
+                else { const p = tcParse(input.value); if (p != null) choose(p); else close(); }
+            }
+        } else if (e.key === 'Escape') { close(); }
+    });
+    input.addEventListener('blur', () => setTimeout(() => {
+        const p = tcParse(input.value);
+        if (p != null) { input.value = tcFmt(p); input.dispatchEvent(new Event('change', { bubbles: true })); }
+        close();
+    }, 150));
 }
 
 // ---- Contatos AJAX ----
@@ -1177,7 +1418,7 @@ function _prioridadeEmoji(p) {
 function shareTexto(pk) {
     const d = _getFormData();
     if (!d) return;
-    let msg = `🇧🇷 *AGENDA — LEANDRO SORGATTO | PL22*\n`;
+    let msg = `🇧🇷 *AGENDA — {{ campanha.candidato_nome|upper }} | {{ campanha.partido_sigla }}{{ campanha.partido_numero }}*\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
     msg += `📋 *${d.titulo}*\n\n`;
     msg += `📅 Data: ${d.data}\n`;
@@ -1192,7 +1433,7 @@ function shareTexto(pk) {
     msg += `\n${_statusEmoji(d.status)} ${d.status} | ${_prioridadeEmoji(d.prioridade)} ${d.prioridade} prioridade`;
     if (d.observacoes) msg += `\n\n💬 Obs: ${d.observacoes}`;
     msg += `\n\n━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `Leandro Sorgatto — Pré-candidato a\nDeputado Federal por Santa Catarina 🇧🇷 PL22`;
+    msg += `{{ campanha.candidato_nome }} — Pré-candidata a\n{{ campanha.cargo_2026 }} por {{ campanha.uf }} 🇧🇷 {{ campanha.partido_sigla }}{{ campanha.partido_numero }}`;
     window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
@@ -1201,13 +1442,13 @@ function shareLink(pk) {
     if (!d) return;
     const baseUrl = window.location.origin;
     const link = `${baseUrl}/agenda/compromissos/${pk}/editar/`;
-    let msg = `🇧🇷 *AGENDA — LEANDRO SORGATTO | PL22*\n`;
+    let msg = `🇧🇷 *AGENDA — {{ campanha.candidato_nome|upper }} | {{ campanha.partido_sigla }}{{ campanha.partido_numero }}*\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
     msg += `📋 *${d.titulo}*\n`;
     msg += `📅 ${d.data} - ${d.hora_inicio} às ${d.hora_fim}\n\n`;
     msg += `🔗 Acesse: ${link}\n\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `Leandro Sorgatto — Pré-candidato a\nDeputado Federal por Santa Catarina 🇧🇷 PL22`;
+    msg += `{{ campanha.candidato_nome }} — Pré-candidata a\n{{ campanha.cargo_2026 }} por {{ campanha.uf }} 🇧🇷 {{ campanha.partido_sigla }}{{ campanha.partido_numero }}`;
     window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
@@ -1283,7 +1524,7 @@ function shareAgenda(periodo) {
             });
 
             const periodoLabel = periodo === 'semana' ? 'SEMANA' : 'MÊS';
-            let msg = `🇧🇷 *AGENDA ${periodoLabel} — LEANDRO SORGATTO | PL22*\n`;
+            let msg = `🇧🇷 *AGENDA ${periodoLabel} — {{ campanha.candidato_nome|upper }} | {{ campanha.partido_sigla }}{{ campanha.partido_numero }}*\n`;
             msg += `━━━━━━━━━━━━━━━━━━━━\n`;
 
             Object.keys(grupos).sort().forEach(dia => {
@@ -1307,7 +1548,7 @@ function shareAgenda(periodo) {
             });
 
             msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
-            msg += `Leandro Sorgatto — Pré-candidato a\nDeputado Federal por Santa Catarina 🇧🇷 PL22`;
+            msg += `{{ campanha.candidato_nome }} — Pré-candidata a\n{{ campanha.cargo_2026 }} por {{ campanha.uf }} 🇧🇷 {{ campanha.partido_sigla }}{{ campanha.partido_numero }}`;
 
             window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
         })
@@ -1334,21 +1575,50 @@ function reloadListView() {
 // ---- Escape key ----
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
+// Faixa horária dinâmica do time-grid: baseline 07:00; se a semana/dia visível
+// tiver evento com horário mais cedo, recua o início do grid para a hora dele
+// (floor), garantindo que nenhum compromisso/evento fique escondido.
+function ajustarSlotMinDinamico() {
+    if (!calendar || !calendar.view) return;
+    if (calendar.view.type.indexOf('timeGrid') !== 0) return; // só semana/dia
+    const ini = calendar.view.activeStart, fim = calendar.view.activeEnd;
+    let minHora = 7; // baseline
+    calendar.getEvents().forEach(function (ev) {
+        if (ev.allDay || !ev.start) return;
+        if (ev.start < ini || ev.start >= fim) return; // fora do intervalo visível
+        const h = ev.start.getHours();
+        if (h < minHora) minHora = h;
+    });
+    const novo = (minHora < 10 ? '0' + minHora : '' + minHora) + ':00:00';
+    if (calendar.getOption('slotMinTime') !== novo) {
+        calendar.setOption('slotMinTime', novo);
+    }
+}
+
 // ---- Calendar ----
 document.addEventListener('DOMContentLoaded', () => {
     const calEl = document.getElementById('calendar');
     calendar = new FullCalendar.Calendar(calEl, {
         locale: 'pt-br',
-        initialView: 'dayGridMonth',
+        initialView: 'timeGridWeek',
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: ''
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
         },
+        slotMinTime: '07:00:00',
+        scrollTime: '08:00:00',
+        nowIndicator: true,
+        allDaySlot: true,
+        slotDuration: '00:30:00',
+        slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+        eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+        allDayText: 'Dia todo',
         eventSources: [
             { url: '{% url "agenda:api_compromissos_json" %}', id: 'compromissos' },
             { url: '{% url "agenda:api_tarefas_calendario" %}', id: 'tarefas' },
             { url: '{% url "agenda:api_eventos_calendario" %}', id: 'eventos' },
+            { url: '{% url "agenda:api_roteiros_calendario" %}', id: 'roteiros' },
         ],
         eventClick: function(info) {
             info.jsEvent.preventDefault();
@@ -1356,6 +1626,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (props.tipo === 'evento_externo') {
                 const evId = info.event.id.replace('evento-', '');
                 openEventoModal(evId);
+            } else if (props.tipo === 'roteiro') {
+                openRoteiroModal(props.data);
             } else if (props.is_tarefa) {
                 openTarefasPopover(info.event.startStr, info.jsEvent);
             } else {
@@ -1364,50 +1636,83 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         dateClick: function(info) {
-            openRoteiroModal(info.dateStr);
+            openDayMenu(info.dateStr, info.jsEvent);
         },
         eventDidMount: function(info) {
             const el = info.el;
             const props = info.event.extendedProps || {};
+            // Balão instantâneo (data-tip, sem o delay do title nativo). Formato "Título|Descrição<br>...".
 
             if (props.is_tarefa) {
-                let tip = info.event.title;
-                if (props.vencidas > 0) {
-                    tip += `\n⚠️ ${props.vencidas} vencida(s)`;
-                    el.classList.add('fc-tarefa-vencida');
-                }
-                tip += '\nClique para ver tarefas';
-                el.title = tip;
+                if (props.vencidas > 0) el.classList.add('fc-tarefa-vencida');
+                const body = [];
+                if (props.vencidas > 0) body.push('⚠️ ' + props.vencidas + ' vencida(s)');
+                body.push('Clique para ver tarefas');
+                el.setAttribute('data-tip', info.event.title + '|' + body.join('<br>'));
                 return;
             }
 
-            // Compromisso tooltip
-            const start = info.event.start;
-            const end = info.event.end;
-            const hi = start ? start.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : '';
-            const hf = end ? end.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : '';
-            let tip = info.event.title;
-            if (hi) tip += `\n${hi}` + (hf ? ` - ${hf}` : '');
-            if (props.cidade) tip += `\n${props.cidade} (${props.regiao})`;
-            if (props.status) tip += `\n${props.status}`;
-            if (props.tarefas_count > 0) tip += `\n📋 ${props.tarefas_count} tarefa(s) vinculada(s)`;
-            // Realce de prioridade alta: ★ + borda à esquerda
+            // Roteiros, eventos e compromissos
+            const isAllDay = info.event.allDay;
+            const start = info.event.start, end = info.event.end;
+            const body = [];
+            // Horário só quando o evento tem hora (dia-inteiro não mostra "00:00").
+            if (!isAllDay && start) {
+                const hi = start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+                const hf = end ? end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) : '';
+                body.push(hi + (hf ? ' – ' + hf : ''));
+            }
+            if (props.cidade) body.push(props.cidade + (props.regiao ? ' (' + props.regiao + ')' : ''));
+            if (props.status) body.push(props.status);
+            if (props.tarefas_count > 0) body.push('📋 ' + props.tarefas_count + ' tarefa(s) vinculada(s)');
+            let title = info.event.title;
             if (props.prioridade === 'alta') {
                 el.classList.add('fc-prio-alta');
                 const tt = el.querySelector('.fc-event-title');
                 if (tt && !tt.dataset.starred) { tt.dataset.starred = '1'; tt.textContent = '★ ' + tt.textContent; }
-                tip = '★ Prioridade alta\n' + tip;
+                title = '★ ' + title;
+                body.unshift('Prioridade alta');
             }
-            el.title = tip;
+            el.setAttribute('data-tip', title + '|' + body.join('<br>'));
+        },
+        eventContent: function(arg) {
+            const p = arg.event.extendedProps || {};
+            // No MÊS, o render padrão do FullCalendar já é bom.
+            if (arg.view.type === 'dayGridMonth') return;
+            const isAllDay = arg.event.allDay;
+            const s = arg.event.start, e = arg.event.end;
+            const fmt = d => d ? d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : '';
+            const wrap = document.createElement('div');
+            // Roteiros/tarefas (dia inteiro) = título numa linha, legível; horários = bloco centralizado.
+            wrap.className = isAllDay ? 'fc-ev-allday' : 'fc-ev-custom';
+            const t = document.createElement('div');
+            t.className = 'fc-ev-title';
+            // Tarefa tem fundo branco tracejado → título precisa de cor escura (senão fica invisível).
+            if (p.is_tarefa) t.style.color = '#334155';
+            t.textContent = (p.prioridade === 'alta' ? '★ ' : '') + arg.event.title;
+            wrap.appendChild(t);
+            if (!isAllDay && s) {
+                const h = document.createElement('div');
+                h.className = 'fc-ev-time';
+                h.textContent = fmt(s) + (e ? ' – ' + fmt(e) : '');
+                wrap.appendChild(h);
+            }
+            return { domNodes: [wrap] };
         },
         height: '100%',
         expandRows: true,
         stickyHeaderDates: true,
         eventOrder: 'order,start,-duration,allDay',
+        // Faixa horária dinâmica: começa às 07:00, mas recua se a semana/dia
+        // tiver evento mais cedo (ex.: 04:31 → grid começa às 04:00). Nada some.
+        slotMaxTime: '24:00:00',
+        datesSet: function () { ajustarSlotMinDinamico(); },
+        eventsSet: function () { ajustarSlotMinDinamico(); },
         buttonText: {
             today: 'Hoje',
             month: 'Mês',
             week: 'Semana',
+            day: 'Dia',
             list: 'Lista',
         },
         eventDisplay: 'block',
@@ -1429,13 +1734,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     calendar.render();
 
-    // Inject tarefas toggle next to "Hoje" button
+    // Toggles de camadas (Eventos / Roteiros / Tarefas) ao lado do "Hoje"
     const toolbarLeft = calEl.querySelector('.fc-toolbar .fc-toolbar-chunk:first-child');
     if (toolbarLeft) {
-        const lbl = document.createElement('label');
-        lbl.className = 'tarefas-toggle';
-        lbl.innerHTML = '<input type="checkbox" id="toggleTarefas" checked onchange="toggleTarefasCalendario(this.checked)"> 📋 Tarefas';
-        toolbarLeft.appendChild(lbl);
+        [
+            { id: 'toggleEventos', label: 'Eventos', fn: 'toggleEventosCalendario' },
+            { id: 'toggleRoteiros', label: 'Roteiros', fn: 'toggleRoteirosCalendario' },
+            { id: 'toggleTarefas', label: 'Tarefas', fn: 'toggleTarefasCalendario' },
+        ].forEach(function (l) {
+            const lbl = document.createElement('label');
+            lbl.className = 'tarefas-toggle';
+            lbl.innerHTML = '<input type="checkbox" id="' + l.id + '" checked onchange="' + l.fn + '(this.checked)"> ' + l.label;
+            toolbarLeft.appendChild(lbl);
+        });
     }
 
     // Auto-open event modal from ?abrir=PK
@@ -1509,6 +1820,16 @@ function toggleTarefasCalendario(show) {
     if (show) {
         calendar.addEventSource({ url: '{% url "agenda:api_tarefas_calendario" %}', id: 'tarefas' });
     }
+}
+function toggleEventosCalendario(show) {
+    const src = calendar.getEventSourceById('eventos');
+    if (src) src.remove();
+    if (show) calendar.addEventSource({ url: '{% url "agenda:api_eventos_calendario" %}', id: 'eventos' });
+}
+function toggleRoteirosCalendario(show) {
+    const src = calendar.getEventSourceById('roteiros');
+    if (src) src.remove();
+    if (show) calendar.addEventSource({ url: '{% url "agenda:api_roteiros_calendario" %}', id: 'roteiros' });
 }
 
 function closeTarefasPopover() {
@@ -1603,14 +1924,150 @@ function openEventoModal(evId) {
             if (d.resultado) { document.getElementById('evResultado').textContent = d.resultado; resS.style.display = 'block'; }
             else { resS.style.display = 'none'; }
 
-            document.getElementById('evEditLink').href = `/agenda/eventos/${d.id}/editar/`;
+            const evEdit = document.getElementById('evEditLink');
+            evEdit.href = 'javascript:void(0)';
+            evEdit.onclick = function () { closeEventoModal(); loadEventoFormModal('/agenda/eventos/' + d.id + '/editar/', 'Editar Evento'); };
             document.getElementById('eventoModal').classList.add('active');
         });
 }
 function closeEventoModal() {
     document.getElementById('eventoModal').classList.remove('active');
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeEventoModal(); closeRoteiroModal(); } });
+// Remove um anexo de evento (botões "remover" dentro do modal de edição).
+function excluirAnexo(id, btn) {
+    if (!confirm('Remover este anexo?')) return;
+    fetch('/agenda/eventos/anexos/' + id + '/excluir/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+    }).then(r => r.json()).then(res => {
+        if (res.success) {
+            const li = btn.closest('[data-anexo]');
+            if (li) li.remove();
+        } else {
+            alert('Não foi possível remover o anexo.');
+        }
+    }).catch(() => alert('Erro ao remover o anexo.'));
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeEventoModal(); closeRoteiroModal(); closeDayMenu(); closeNovoMenu(); } });
+
+// ---- Mini-seletor do dia (Compromisso / Roteiro / Evento) ----
+var _dayMenuDate = null;
+function openDayMenu(dateStr, jsEvent) {
+    _dayMenuDate = dateStr;
+    var m = document.getElementById('dayMenu');
+    var d = new Date(dateStr + 'T12:00:00');
+    var lbl = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+    document.getElementById('dayMenuHead').textContent = 'Novo em ' + lbl.charAt(0).toUpperCase() + lbl.slice(1);
+    m.classList.add('open');
+    var x = (jsEvent && jsEvent.clientX) || 120, y = (jsEvent && jsEvent.clientY) || 120;
+    var w = m.offsetWidth, h = m.offsetHeight;
+    m.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 10)) + 'px';
+    m.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 10)) + 'px';
+}
+function closeDayMenu() { var m = document.getElementById('dayMenu'); if (m) m.classList.remove('open'); }
+function dayMenuPick(kind) {
+    var date = _dayMenuDate;
+    closeDayMenu();
+    if (kind === 'compromisso') openCreate(date);
+    else if (kind === 'roteiro') openRoteiroModal(date);
+    else if (kind === 'evento') loadEventoFormModal('{% url "agenda:evento_create" %}?data=' + date, 'Novo Evento');
+    else if (kind === 'tarefa') loadTarefaFormModal('{% url "tarefas:tarefa_create" %}?prazo=' + date, 'Nova Tarefa');
+}
+
+// ---- Tarefa em modal (criar) ----
+function loadTarefaFormModal(url, title) {
+    openModal(title);
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) { document.getElementById('modalBody').innerHTML = data.html; initTarefaModalForm(); })
+        .catch(function () { document.getElementById('modalBody').innerHTML = '<div style="padding:40px;text-align:center;color:#dc2626;">Erro ao carregar o formulário.</div>'; });
+}
+function initTarefaModalForm() {
+    var form = document.getElementById('tarefa-modal-form');
+    if (!form) return;
+    var reg = form.querySelector('#id_regiao'), cid = form.querySelector('#id_cidade');
+    if (reg && cid) reg.addEventListener('change', function () {
+        var rid = reg.value;
+        cid.innerHTML = '<option value="">---------</option>';
+        if (!rid) return;
+        fetch('/tarefas/api/cidades/' + rid + '/').then(function (r) { return r.json(); }).then(function (cs) {
+            cs.forEach(function (c) { var o = document.createElement('option'); o.value = c.id; o.textContent = c.nome; cid.appendChild(o); });
+        });
+    });
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: new FormData(form), credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) { closeModal(); calendar.refetchEvents(); if (typeof reloadListView === 'function') reloadListView(); }
+                else { document.getElementById('modalBody').innerHTML = data.html; initTarefaModalForm(); }
+            })
+            .catch(function () { alert('Erro ao salvar a tarefa. Verifique os dados e tente novamente.'); });
+    });
+}
+
+// ---- Evento em modal (criar/editar) ----
+function loadEventoFormModal(url, title) {
+    openModal(title);
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) { document.getElementById('modalBody').innerHTML = data.html; initEventoModalForm(); })
+        .catch(function () { document.getElementById('modalBody').innerHTML = '<div style="padding:40px;text-align:center;color:#dc2626;">Erro ao carregar o formulário.</div>'; });
+}
+function initEventoModalForm() {
+    var form = document.getElementById('evento-modal-form');
+    if (!form) return;
+    var reg = form.querySelector('#id_regiao'), cid = form.querySelector('#id_cidade');
+    if (reg && cid) reg.addEventListener('change', function () {
+        var rid = reg.value;
+        cid.innerHTML = '<option value="">---------</option>';
+        if (!rid) return;
+        fetch('/liderancas/api/cidades/' + rid + '/').then(function (r) { return r.json(); }).then(function (cs) {
+            cs.forEach(function (c) { var o = document.createElement('option'); o.value = c.id; o.textContent = c.nome; cid.appendChild(o); });
+        });
+    });
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: new FormData(form), credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) { closeModal(); calendar.refetchEvents(); if (typeof reloadListView === 'function') reloadListView(); }
+                else { document.getElementById('modalBody').innerHTML = data.html; initEventoModalForm(); }
+            })
+            .catch(function () { alert('Erro ao salvar o evento. Verifique os dados e tente novamente.'); });
+    });
+}
+// fecha ao clicar fora (o clique que abriu vem de uma célula do dia, então não auto-fecha)
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('#dayMenu') && !e.target.closest('.fc-daygrid-day')) closeDayMenu();
+});
+
+// ---- Menu "+ Novo" no header (mesmos 4 serviços, sem dia escolhido) ----
+function toggleNovoMenu(ev) {
+    ev.stopPropagation();
+    var m = document.getElementById('novoMenu');
+    if (m.classList.contains('open')) { closeNovoMenu(); return; }
+    closeDayMenu();
+    var r = document.getElementById('novoBtn').getBoundingClientRect();
+    m.classList.add('open');
+    var w = m.offsetWidth;
+    m.style.left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 10)) + 'px';
+    m.style.top = (r.bottom + 6) + 'px';
+}
+function closeNovoMenu() { var m = document.getElementById('novoMenu'); if (m) m.classList.remove('open'); }
+function novoPick(kind) {
+    closeNovoMenu();
+    var d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    var today = d.toISOString().slice(0, 10);
+    if (kind === 'compromisso') openCreate();
+    else if (kind === 'roteiro') openRoteiroModal(today);
+    else if (kind === 'evento') loadEventoFormModal('{% url "agenda:evento_create" %}', 'Novo Evento');
+    else if (kind === 'tarefa') loadTarefaFormModal('{% url "tarefas:tarefa_create" %}', 'Nova Tarefa');
+}
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('#novoMenu') && !e.target.closest('#novoBtn')) closeNovoMenu();
+});
 
 // ---- Modal Roteiro do Dia ----
 let _roteiroDiaData = null;
@@ -1950,71 +2407,5 @@ window.CRM_TOUR = {
     ],
 };
 
-// ===== Painel estratégico da agenda =====
-// Vem fechado por padrão; lembra a preferência se o usuário abrir.
-function toggleEstr() {
-    const p = document.getElementById('estrategiaPanel');
-    const collapsed = p.classList.toggle('collapsed');
-    try { localStorage.setItem('estrCollapsed', collapsed ? '1' : '0'); } catch (e) {}
-}
-(function () {
-    try {
-        if (localStorage.getItem('estrCollapsed') === '0') {
-            document.getElementById('estrategiaPanel').classList.remove('collapsed');
-        }
-    } catch (e) {}
-})();
-function agendarCidade(id) {
-    const url = '{% url "agenda:compromisso_create" %}?cidade=' + id;
-    if (typeof loadFormIntoModal === 'function') loadFormIntoModal(url, 'Novo Compromisso — Agendar Visita');
-    else window.location = '/agenda/compromissos/?cidade=' + id;
-}
-function _estrColor(o) { return o >= 66 ? '#b91c1c' : o >= 33 ? '#fb923c' : '#fde68a'; }
-function _estrItem(c, withBtn) {
-    const meta = `${c.regiao ? c.regiao.split(' ').slice(-1)[0] : ''} · pen ${c.penetracao}% · ${c.apoiadores} apoiador${c.apoiadores === 1 ? '' : 'es'}`;
-    return `<div class="estr-item">
-        <span class="estr-rank" style="background:${_estrColor(c.opp)}"></span>
-        <div class="grow"><div class="nm">${c.nome}</div><div class="meta">${meta}</div></div>
-        <span class="meta" style="font-weight:700;color:${_estrColor(c.opp)}">${c.opp}</span>
-        ${withBtn ? `<button class="estr-btn" onclick="agendarCidade(${c.cidade_id})">Agendar</button>` : ''}
-    </div>`;
-}
-function renderEstrategia(d) {
-    const p = d.pulso, b = d.burndown;
-    document.getElementById('estrSub').textContent =
-        `${p.alvos_sem_visita} alvos prioritários ainda sem visita`;
-    const sug = (d.sugestoes || []).map(c => _estrItem(c, true)).join('') ||
-        '<div class="estr-loading">Tudo coberto. 👏</div>';
-    const orf = (d.alertas.orfas_lista || []).map(c => _estrItem(c, true)).join('');
-    const esf = (d.alertas.esfriando_lista || []).map(c => _estrItem(c, true)).join('');
-    document.getElementById('estrBody').innerHTML = `
-        <div class="estr-pulse">
-            <div class="estr-card"><div class="v">${p.dias}</div><div class="l">dias p/ eleição</div></div>
-            <div class="estr-card"><div class="v">${p.compromissos_semana}</div><div class="l">compromissos/semana</div></div>
-            <div class="estr-card"><div class="v">${p.cidades_mes}</div><div class="l">cidades cobertas/mês</div></div>
-            <div class="estr-card alvo" data-tip="Alvos sem visita|Cidades de alta oportunidade (muito voto, você é fraco) sem nenhum compromisso futuro. É o tempo que você ainda não alocou."><div class="v">${p.alvos_sem_visita}</div><div class="l">alvos sem visita</div></div>
-        </div>
-        <div class="estr-ritmo" data-tip="Ritmo necessário|Alvos prioritários sem visita ÷ semanas até a eleição. É quantas cidades novas por semana você precisa cobrir para não deixar voto na mesa.">
-            🏁 Ritmo: <b>${b.sem_visita}</b> alvos prioritários sem visita ÷ <b>${b.semanas}</b> semanas = <b>~${b.ritmo} cidades/semana</b> para cobrir o terreno antes da eleição.
-        </div>
-        <div class="estr-cols">
-            <div>
-                <div class="estr-sec-t">🎯 Onde investir esta semana</div>
-                ${sug}
-            </div>
-            <div>
-                <div class="estr-sec-t">⚠️ Alertas</div>
-                <div class="estr-alert"><span class="estr-badge orf">${d.alertas.orfas}</span> oportunidades órfãs <span class="meta">(boas e nunca visitadas)</span></div>
-                ${orf}
-                <div class="estr-alert" style="margin-top:6px;"><span class="estr-badge esf">${d.alertas.esfriando}</span> bases esfriando <span class="meta">(fortes, sem visita marcada)</span></div>
-                ${esf}
-            </div>
-        </div>`;
-}
-document.addEventListener('DOMContentLoaded', function () {
-    fetch('{% url "agenda:api_estrategia_agenda" %}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(r => r.json()).then(renderEstrategia)
-        .catch(() => { document.getElementById('estrBody').innerHTML = '<div class="estr-loading">Não foi possível carregar a estratégia.</div>'; });
-});
 </script>
 {% endblock %}

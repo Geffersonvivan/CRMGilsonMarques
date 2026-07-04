@@ -8,14 +8,22 @@ from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.utils import timezone
 from usuarios.views import admin_required, secao_required
-from liderancas.models import CoordenadorRegional, CaboEleitoral, Apoiador, Cidade
+from liderancas.models import Lideranca, Cidade
 from tarefas.models import Tarefa
-from .models import Compromisso, Evento, Roteiro, RoteiroPonto
+from .models import Compromisso, Evento, EventoAnexo, Roteiro, RoteiroPonto
 from .forms import CompromissoForm, EventoForm, RoteiroForm, RoteiroPontoFormSet
 
 
 def _is_ajax(request):
     return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+
+def _salvar_anexos_evento(request, form, evento):
+    """Cria um EventoAnexo para cada arquivo enviado no campo `anexos`."""
+    for arquivo in form.cleaned_data.get('anexos', []):
+        EventoAnexo.objects.create(
+            evento=evento, arquivo=arquivo, enviado_por=request.user,
+        )
 
 
 # ==================== COMPROMISSOS ====================
@@ -49,9 +57,9 @@ def compromisso_create(request):
         import json as json_mod
         initial, selecionados = {}, None
         contato, chave = None, None
-        for param, model in (('apoiador', Apoiador), ('cabo', CaboEleitoral), ('coordenador', CoordenadorRegional)):
+        for param, papel in (('apoiador', 'apoiador'), ('cabo', 'cabo'), ('coordenador', 'coordenador')):
             if request.GET.get(param):
-                contato = model.objects.filter(pk=request.GET[param]).first()
+                contato = Lideranca.objects.filter(papel=papel, pk=request.GET[param]).first()
                 chave = param
                 break
         if contato:
@@ -276,8 +284,8 @@ def _sugestoes_cidades(regiao, limite=8):
     agora = tz.now()
     por_cidade = {}
     fontes = (
-        CaboEleitoral.objects.filter(cidade__regiao=regiao).select_related('cidade'),
-        Apoiador.objects.filter(cidade__regiao=regiao).select_related('cidade'),
+        Lideranca.objects.filter(papel='cabo', cidade__regiao=regiao).select_related('cidade'),
+        Lideranca.objects.filter(papel='apoiador', cidade__regiao=regiao).select_related('cidade'),
     )
     for qs in fontes:
         for c in qs.annotate(ultima=Max('interacoes__data')):
@@ -393,19 +401,19 @@ def _contatos_payload(qs):
 
 @secao_required('demandas:agenda')
 def api_coordenadores_regiao(request, regiao_id):
-    qs = CoordenadorRegional.objects.filter(regiao_id=regiao_id)
+    qs = Lideranca.objects.filter(papel='coordenador', regiao_id=regiao_id)
     return JsonResponse(_contatos_payload(qs), safe=False)
 
 
 @secao_required('demandas:agenda')
 def api_cabos_cidade(request, cidade_id):
-    qs = CaboEleitoral.objects.filter(cidade_id=cidade_id)
+    qs = Lideranca.objects.filter(papel='cabo', cidade_id=cidade_id)
     return JsonResponse(_contatos_payload(qs), safe=False)
 
 
 @secao_required('demandas:agenda')
 def api_apoiadores_cidade(request, cidade_id):
-    qs = Apoiador.objects.filter(cidade_id=cidade_id)
+    qs = Lideranca.objects.filter(papel='apoiador', cidade_id=cidade_id)
     return JsonResponse(_contatos_payload(qs), safe=False)
 
 
@@ -444,25 +452,31 @@ def api_tarefas_calendario(request):
         qs = qs.filter(prazo__lte=end[:10])
 
     today = date_type.today()
-    por_dia = defaultdict(lambda: {'total': 0, 'vencidas': 0, 'ids': []})
+    por_dia = defaultdict(lambda: {'total': 0, 'vencidas': 0, 'ids': [], 'titulos': []})
     for t in qs:
         dia = t.prazo.isoformat()
         por_dia[dia]['total'] += 1
         por_dia[dia]['ids'].append(t.pk)
+        por_dia[dia]['titulos'].append(t.titulo)
         if t.prazo < today:
             por_dia[dia]['vencidas'] += 1
 
     events = []
     for dia, info in por_dia.items():
         tem_vencida = info['vencidas'] > 0
+        # 1 tarefa no dia → mostra o título dela; várias → mostra a contagem.
+        if info['total'] == 1:
+            titulo = f'\U0001f4cb {info["titulos"][0]}'
+        else:
+            titulo = f'\U0001f4cb {info["total"]} tarefas'
         events.append({
             'id': f'tarefas-{dia}',
-            'title': f'\U0001f4cb {info["total"]} tarefa{"s" if info["total"] > 1 else ""}',
+            'title': titulo,
             'start': dia,
             'allDay': True,
             'display': 'block',
-            'color': '#ef4444' if tem_vencida else '#64748b',
-            'borderColor': '#ef4444' if tem_vencida else '#64748b',
+            'color': '#ef4444' if tem_vencida else '#0d9488',
+            'borderColor': '#ef4444' if tem_vencida else '#0d9488',
             'classNames': ['fc-tarefa-event'],
             'order': 1,
             'extendedProps': {
@@ -742,6 +756,27 @@ def evento_list(request):
 
 @secao_required('demandas:eventos')
 def evento_create(request):
+    # Fluxo modal (XHR), igual ao Compromisso
+    if request.method == 'POST' and _is_ajax(request):
+        form = EventoForm(request.POST, request.FILES)
+        if form.is_valid():
+            evento = form.save(commit=False)
+            evento.cadastrado_por = request.user
+            evento.save()
+            form.save_m2m()
+            _salvar_anexos_evento(request, form, evento)
+            return JsonResponse({'success': True})
+        html = render_to_string('agenda/_evento_form.html', {'form': form, 'action': request.path}, request=request)
+        return JsonResponse({'success': False, 'html': html})
+    if _is_ajax(request):
+        initial = {}
+        if request.GET.get('data'):
+            initial['data'] = request.GET['data']
+        form = EventoForm(initial=initial)
+        html = render_to_string('agenda/_evento_form.html', {'form': form, 'action': request.path}, request=request)
+        return JsonResponse({'html': html})
+
+    # Fallback página inteira (sem JS)
     if request.method == 'POST':
         form = EventoForm(request.POST, request.FILES)
         if form.is_valid():
@@ -749,10 +784,14 @@ def evento_create(request):
             evento.cadastrado_por = request.user
             evento.save()
             form.save_m2m()
+            _salvar_anexos_evento(request, form, evento)
             messages.success(request, 'Evento cadastrado com sucesso!')
             return redirect('agenda:evento_list')
     else:
-        form = EventoForm()
+        initial = {}
+        if request.GET.get('data'):
+            initial['data'] = request.GET['data']
+        form = EventoForm(initial=initial)
     return render(request, 'agenda/evento_form.html', {
         'form': form,
         'titulo': 'Novo Evento',
@@ -762,10 +801,24 @@ def evento_create(request):
 @secao_required('demandas:eventos')
 def evento_edit(request, pk):
     evento = get_object_or_404(Evento, pk=pk)
+    if request.method == 'POST' and _is_ajax(request):
+        form = EventoForm(request.POST, request.FILES, instance=evento)
+        if form.is_valid():
+            form.save()
+            _salvar_anexos_evento(request, form, evento)
+            return JsonResponse({'success': True})
+        html = render_to_string('agenda/_evento_form.html', {'form': form, 'action': request.path}, request=request)
+        return JsonResponse({'success': False, 'html': html})
+    if _is_ajax(request):
+        form = EventoForm(instance=evento)
+        html = render_to_string('agenda/_evento_form.html', {'form': form, 'action': request.path}, request=request)
+        return JsonResponse({'html': html})
+
     if request.method == 'POST':
         form = EventoForm(request.POST, request.FILES, instance=evento)
         if form.is_valid():
             form.save()
+            _salvar_anexos_evento(request, form, evento)
             messages.success(request, 'Evento atualizado com sucesso!')
             return redirect('agenda:evento_list')
     else:
@@ -785,6 +838,18 @@ def evento_delete(request, pk):
     return redirect('agenda:evento_list')
 
 
+@secao_required('demandas:eventos')
+def evento_anexo_delete(request, pk):
+    """Exclui um único anexo (registro + arquivo físico)."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método inválido'}, status=405)
+    anexo = get_object_or_404(EventoAnexo, pk=pk)
+    anexo.arquivo.delete(save=False)
+    anexo.delete()
+    return JsonResponse({'success': True})
+
+
+@secao_required('demandas:agenda')
 def api_eventos_calendario(request):
     """Retorna eventos confirmados para o FullCalendar."""
     eventos = Evento.objects.filter(
@@ -800,11 +865,11 @@ def api_eventos_calendario(request):
             end = f'{e.data}T{e.horario_fim}'
         result.append({
             'id': f'evento-{e.id}',
-            'title': f'📌 {e.nome}',
+            'title': f'🚩 {e.nome}',
             'start': start,
             'end': end,
-            'color': '#e91e8b',
-            'textColor': '#fff',
+            'color': '#f4c430',
+            'textColor': '#0c1b38',
             'allDay': not e.horario_inicio,
             'order': 0,
             'extendedProps': {
@@ -817,9 +882,39 @@ def api_eventos_calendario(request):
     return JsonResponse(result, safe=False)
 
 
+@secao_required('demandas:agenda')
+def api_roteiros_calendario(request):
+    """Roteiros salvos como chips (dia inteiro) no calendário, no dia do roteiro."""
+    from django.db.models import Count
+    start = request.GET.get('start')
+    end = request.GET.get('end')
+    qs = Roteiro.objects.annotate(n_pontos=Count('pontos'))
+    if start:
+        qs = qs.filter(data__gte=start[:10])
+    if end:
+        qs = qs.filter(data__lte=end[:10])
+    result = []
+    for r in qs:
+        result.append({
+            'id': f'roteiro-{r.pk}',
+            'title': f'🧭 {r.titulo} ({r.n_pontos})',
+            'start': r.data.isoformat(),
+            'allDay': True,
+            'display': 'block',
+            'color': '#ef6a32',
+            'textColor': '#fff',
+            'order': 2,
+            'extendedProps': {'tipo': 'roteiro', 'pk': r.pk, 'data': r.data.isoformat()},
+        })
+    return JsonResponse(result, safe=False)
+
+
 def api_evento_detalhe(request, pk):
     """Retorna detalhes de um evento para o modal."""
-    e = get_object_or_404(Evento.objects.select_related('cidade', 'cidade__regiao'), pk=pk)
+    e = get_object_or_404(
+        Evento.objects.select_related('cidade', 'cidade__regiao').prefetch_related('anexos'),
+        pk=pk,
+    )
     return JsonResponse({
         'id': e.id,
         'nome': e.nome,
@@ -834,6 +929,11 @@ def api_evento_detalhe(request, pk):
         'observacoes': e.observacoes,
         'resultado': e.resultado,
         'imagem': e.imagem.url if e.imagem else None,
+        'anexos': [
+            {'id': a.id, 'url': a.arquivo.url, 'nome': a.nome_arquivo,
+             'is_imagem': a.is_imagem, 'legenda': a.legenda}
+            for a in e.anexos.all()
+        ],
     })
 
 
@@ -1058,7 +1158,7 @@ def api_estrategia_agenda(request):
 
     cidades = list(Cidade.objects.select_related('regiao').all())
     ap = {r['cidade_id']: r['n'] for r in
-          Apoiador.objects.filter(status='ativo').values('cidade_id').annotate(n=models.Count('id'))}
+          Lideranca.objects.filter(papel='apoiador', status='ativo').values('cidade_id').annotate(n=models.Count('id'))}
 
     comp_fut, comp_ever, cidades_mes = set(), set(), set()
     comp_semana = 0
@@ -1083,15 +1183,15 @@ def api_estrategia_agenda(request):
         if ini_sem <= d <= fim_sem:
             comp_semana += 1
 
-    pens = [c.votos_sorgatto_2022 / c.eleitores for c in cidades if c.eleitores]
+    pens = [c.votos_referencia_2022 / c.eleitores for c in cidades if c.eleitores]
     maxpen = max(pens) if pens else 1
-    tot_v = sum(c.votos_sorgatto_2022 for c in cidades)
+    tot_v = sum(c.votos_referencia_2022 for c in cidades)
     tot_e = sum(c.eleitores for c in cidades) or 1
     avg_pen = tot_v / tot_e
 
     rows, maxopp = [], 0.0
     for c in cidades:
-        pen = (c.votos_sorgatto_2022 / c.eleitores) if c.eleitores else 0
+        pen = (c.votos_referencia_2022 / c.eleitores) if c.eleitores else 0
         deficit = max(0.0, 1 - (pen / maxpen if maxpen else 0))
         # log (não sqrt) amortece o peso do eleitorado: as capitais param de dominar
         # e a cidade média, conservadora e esquecida sobe no ranking.

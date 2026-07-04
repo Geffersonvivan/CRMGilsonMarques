@@ -25,9 +25,11 @@ urlpatterns = [
     path('eventos/novo/', views.evento_create, name='evento_create'),
     path('eventos/<int:pk>/editar/', views.evento_edit, name='evento_edit'),
     path('eventos/<int:pk>/excluir/', views.evento_delete, name='evento_delete'),
+    path('eventos/anexos/<int:pk>/excluir/', views.evento_anexo_delete, name='evento_anexo_delete'),
 
     # API
     path('api/eventos-calendario/', views.api_eventos_calendario, name='api_eventos_calendario'),
+    path('api/roteiros-calendario/', views.api_roteiros_calendario, name='api_roteiros_calendario'),
     path('api/eventos/<int:pk>/', views.api_evento_detalhe, name='api_evento_detalhe'),
     path('api/roteiro-dia/', views.api_roteiro_dia, name='api_roteiro_dia'),
     path('api/roteiro-salvar/', views.api_salvar_roteiro, name='api_salvar_roteiro'),

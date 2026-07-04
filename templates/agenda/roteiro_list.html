@@ -13,6 +13,8 @@
 
 {% block content %}
 
+{% include 'agenda/_section_nav.html' %}
+
 <div class="page-header">
     <h1 class="page-title" data-tip="Planos de deslocamento diário com paradas ordenadas vinculadas a compromissos da agenda.">Roteiros</h1>
     <a href="{% url 'agenda:roteiro_create' %}" class="btn btn-primary" data-tip="Novo roteiro|Monta o trajeto de um dia: escolha data e região e adicione compromissos como paradas.">
@@ -38,7 +40,7 @@
             {% for r in roteiros %}
             <tr>
                 <td>{{ r.data|date:"d/m/Y" }}</td>
-                <td><a href="{% url 'agenda:roteiro_detail' r.pk %}" style="color:#002776;text-decoration:none;font-weight:500;">{{ r.titulo }}</a></td>
+                <td><a href="{% url 'agenda:roteiro_detail' r.pk %}" style="color:#FF6B00;text-decoration:none;font-weight:500;">{{ r.titulo }}</a></td>
                 <td>{{ r.regiao.sigla }}</td>
                 <td>{{ r.motorista|default:"-" }}</td>
                 <td>{{ r.pontos.count }}</td>

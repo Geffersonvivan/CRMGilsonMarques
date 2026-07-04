@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from liderancas.models import Regiao, Cidade
 
@@ -8,10 +9,12 @@ class Compromisso(models.Model):
         ('reuniao', 'Reunião'),
         ('evento', 'Evento'),
         ('visita', 'Visita'),
+        ('roteiro', 'Roteiro'),
         ('comicio', 'Comício'),
         ('entrevista', 'Entrevista'),
         ('viagem', 'Viagem'),
         ('pessoal', 'Pessoal'),
+        ('outro', 'Outro'),
     ]
     PRIORIDADE_CHOICES = [
         ('alta', 'Alta'),
@@ -28,10 +31,12 @@ class Compromisso(models.Model):
         'reuniao': '#0073ea',
         'evento': '#a25ddc',
         'visita': '#00c875',
+        'roteiro': '#0ea5e9',
         'comicio': '#e2445c',
         'entrevista': '#fdab3d',
         'viagem': '#579bfc',
         'pessoal': '#c4c4c4',
+        'outro': '#94a3b8',
     }
 
     titulo = models.CharField(max_length=200, verbose_name='Título')
@@ -55,15 +60,18 @@ class Compromisso(models.Model):
     )
     participantes = models.TextField(blank=True)
     coordenadores = models.ManyToManyField(
-        'liderancas.CoordenadorRegional', blank=True, related_name='compromissos',
+        'liderancas.Lideranca', blank=True, related_name='compromissos_coordenador',
+        limit_choices_to={'papel': 'coordenador'},
         verbose_name='Coordenadores participantes',
     )
     cabos = models.ManyToManyField(
-        'liderancas.CaboEleitoral', blank=True, related_name='compromissos',
+        'liderancas.Lideranca', blank=True, related_name='compromissos_cabo',
+        limit_choices_to={'papel': 'cabo'},
         verbose_name='Cabos participantes',
     )
     apoiadores = models.ManyToManyField(
-        'liderancas.Apoiador', blank=True, related_name='compromissos',
+        'liderancas.Lideranca', blank=True, related_name='compromissos_apoiador',
+        limit_choices_to={'papel': 'apoiador'},
         verbose_name='Apoiadores participantes',
     )
     interacoes_geradas = models.BooleanField(
@@ -122,10 +130,10 @@ class Compromisso(models.Model):
             f'{self.cidade.nome} ({self.data_hora_inicio:%d/%m/%Y})'
         )
         criadas = 0
-        for m2m, fk in (('coordenadores', 'coordenador'), ('cabos', 'cabo'), ('apoiadores', 'apoiador')):
+        for m2m in ('coordenadores', 'cabos', 'apoiadores'):
             for contato in getattr(self, m2m).all():
                 InteracaoLog.objects.create(
-                    **{fk: contato},
+                    lideranca=contato,
                     tipo=tipo,
                     descricao=descricao,
                     data=self.data_hora_inicio,
@@ -277,3 +285,41 @@ class Evento(models.Model):
 
     def __str__(self):
         return f'{self.nome} — {self.data:%d/%m/%Y}'
+
+
+class EventoAnexo(models.Model):
+    """Arquivos (imagens e PDFs) anexados a um evento. A capa continua sendo
+    o campo `imagem` do Evento; estes são os anexos adicionais."""
+    EXTENSOES = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf']
+
+    evento = models.ForeignKey(
+        Evento, on_delete=models.CASCADE, related_name='anexos',
+    )
+    arquivo = models.FileField(
+        upload_to='eventos/anexos/',
+        validators=[FileExtensionValidator(EXTENSOES)],
+        verbose_name='Arquivo',
+    )
+    legenda = models.CharField(max_length=200, blank=True, verbose_name='Legenda')
+    enviado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='eventos_anexos',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Anexo do evento'
+        verbose_name_plural = 'Anexos do evento'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return self.nome_arquivo
+
+    @property
+    def is_imagem(self):
+        return self.arquivo.name.lower().endswith(
+            ('.jpg', '.jpeg', '.png', '.webp', '.gif'))
+
+    @property
+    def nome_arquivo(self):
+        return self.arquivo.name.rsplit('/', 1)[-1]

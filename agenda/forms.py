@@ -5,8 +5,31 @@ from django import forms
 from django.forms import inlineformset_factory
 from django.utils import timezone
 from liderancas.models import Cidade
-from liderancas.models import Regiao, CoordenadorRegional, CaboEleitoral, Apoiador
-from .models import Compromisso, Evento, Roteiro, RoteiroPonto
+from liderancas.models import Regiao, Lideranca
+from .models import Compromisso, Evento, EventoAnexo, Roteiro, RoteiroPonto
+
+ANEXO_MAX_BYTES = 10 * 1024 * 1024  # 10 MB por arquivo
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    """Campo de upload que aceita vários arquivos (<input multiple>)."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault(
+            'widget',
+            MultipleFileInput(attrs={'class': 'form-input', 'accept': 'image/*,application/pdf'}),
+        )
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single = super().clean
+        if isinstance(data, (list, tuple)):
+            return [single(d, initial) for d in data]
+        return [single(data, initial)] if data else []
 
 
 class CompromissoForm(forms.ModelForm):
@@ -14,15 +37,15 @@ class CompromissoForm(forms.ModelForm):
     # contatos do modal (populado via API por região/cidade); os campos aqui
     # só validam e salvam os IDs postados.
     coordenadores = forms.ModelMultipleChoiceField(
-        queryset=CoordenadorRegional.objects.all(), required=False,
+        queryset=Lideranca.objects.filter(papel='coordenador'), required=False,
         widget=forms.MultipleHiddenInput,
     )
     cabos = forms.ModelMultipleChoiceField(
-        queryset=CaboEleitoral.objects.all(), required=False,
+        queryset=Lideranca.objects.filter(papel='cabo'), required=False,
         widget=forms.MultipleHiddenInput,
     )
     apoiadores = forms.ModelMultipleChoiceField(
-        queryset=Apoiador.objects.all(), required=False,
+        queryset=Lideranca.objects.filter(papel='apoiador'), required=False,
         widget=forms.MultipleHiddenInput,
     )
     aliados = forms.ModelMultipleChoiceField(
@@ -34,15 +57,24 @@ class CompromissoForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}, format='%Y-%m-%d'),
         input_formats=['%Y-%m-%d'],
     )
+    # Campo estilo Google Agenda: input de texto (digitável) + dropdown de slots
+    # de 15 min com filtro e duração, montado por JS (setupTimeCombo). Os formatos
+    # abaixo aceitam o que o JS normaliza e variações digitadas à mão.
     hora_inicio = forms.TimeField(
         label='Início',
-        widget=forms.TimeInput(attrs={'class': 'form-input', 'type': 'time'}),
-        input_formats=['%H:%M'],
+        widget=forms.TextInput(attrs={
+            'class': 'form-input tc-input', 'autocomplete': 'off',
+            'placeholder': 'hh:mm', 'inputmode': 'numeric',
+        }),
+        input_formats=['%H:%M', '%H:%M:%S', '%Hh%M', '%I:%M %p', '%I:%M%p'],
     )
     hora_fim = forms.TimeField(
         label='Fim',
-        widget=forms.TimeInput(attrs={'class': 'form-input', 'type': 'time'}),
-        input_formats=['%H:%M'],
+        widget=forms.TextInput(attrs={
+            'class': 'form-input tc-input', 'autocomplete': 'off',
+            'placeholder': 'hh:mm', 'inputmode': 'numeric',
+        }),
+        input_formats=['%H:%M', '%H:%M:%S', '%Hh%M', '%I:%M %p', '%I:%M%p'],
     )
 
     class Meta:
@@ -165,6 +197,20 @@ class EventoForm(forms.ModelForm):
         required=False,
         widget=forms.Select(attrs={'class': 'form-input', 'id': 'id_regiao'}),
     )
+    # Não faz parte do model Evento: a view grava cada arquivo como EventoAnexo.
+    anexos = MultipleFileField(required=False, label='Anexos (imagens e PDFs)')
+
+    def clean_anexos(self):
+        arquivos = self.cleaned_data.get('anexos') or []
+        extensoes = tuple('.' + e for e in EventoAnexo.EXTENSOES)
+        for f in arquivos:
+            if not f.name.lower().endswith(extensoes):
+                raise forms.ValidationError(
+                    f'"{f.name}": tipo não permitido. Use imagens ou PDF.')
+            if f.size > ANEXO_MAX_BYTES:
+                raise forms.ValidationError(
+                    f'"{f.name}": arquivo maior que 10 MB.')
+        return arquivos
 
     class Meta:
         model = Evento

@@ -193,6 +193,9 @@ negócio, só remove o acoplamento marca↔código. Validar cada marca subindo l
 cobrir com **teste automatizado** o que o CLAUDE.md §13 já exige (moderação, permissão,
 idempotência do sync, integridade do mapa) rodando sob a config de pelo menos duas marcas
 — assim a troca de marca não pode regredir comportamento em silêncio.
+✅ Suíte criada em 04/07/2026 (42 testes: §13 completo + templates/manifest sob 2 configs;
+`manage.py test`). De quebra ela achou e corrigiu o grafo de migrações que impedia um
+banco zerado de migrar (tarefas/0010 × liderancas/0018) — pré-requisito do passo 6.
 
 **Decisões desta fase** (resolvidas — ver Seção 5): módulo neutro **`crm/`** (D9);
 **monorepo único** com config de marca versionada em `configs/<slug>.py` selecionada por

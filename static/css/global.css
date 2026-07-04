@@ -1,10 +1,54 @@
 /* ============================================
-   CRM Eleitoral LS — Design System Global
+   CRM Eleitoral Isadora Piana — Design System Global
    ============================================ */
+
+/* ---------- Design tokens ----------
+   Fonte única de cor. Regra de uso (CLAUDE.md §2) — paleta NOVO:
+   --navy* = laranja NOVO (estrutura/marca) · --navy-900 = grafite (superfície
+   escura) · --ouro = laranja escuro (assinatura, com moderação) ·
+   --coral = Mobilização (roxo) · --teal = Tarefas · vermelho = pendência/atraso.
+   (Os nomes navy/ouro/coral são históricos; o valor é a cor real acima.)
+   Não introduzir hex avulso fora daqui — usar as variáveis. */
+:root {
+    /* Marca — laranja NOVO */
+    --navy: #FF6B00;
+    --navy-700: #E25E00;
+    --navy-900: #2B2B2B;   /* grafite — superfície escura (PWA/modais) */
+    /* Assinatura (laranja escuro — uso moderado em fio/chip/realce) */
+    --ouro: #C44B00;
+    --ouro-strong: #A33D00;
+    /* Verticais */
+    --coral: #7c3aed;   /* Mobilização (roxo, p/ não conflitar com o laranja da marca) */
+    --teal: #0d9488;    /* Tarefas */
+    /* Interação (consolida os vários azuis claros que faziam papel de link/foco) */
+    --accent: #2563eb;
+    --accent-ring: rgba(37, 99, 235, 0.12);
+    /* Semânticas */
+    --danger: #dc2626;
+    --danger-bg: #fee2e2;
+    --success: #16a34a;
+    --warn: #d97706;
+    /* Tinta e superfícies */
+    --ink: #1e293b;
+    --muted: #64748b;
+    --faint: #94a3b8;
+    --line: #e2e8f0;
+    --line-soft: #f1f5f9;
+    --surface: #fff;
+    --bg: #f0f2f5;
+    /* Tipografia */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    /* Números (KPIs/contadores): tabulares, para alinhar e ler com confiança */
+    --num-feat: 700 1.6rem/1 var(--font-sans);
+}
+
+/* Números de destaque em todo o sistema lêem-se alinhados (tabular) */
+.summary-value, .mc-value, .semana-num, #countdown-bar,
+.tag-counter, .pend-sup { font-variant-numeric: tabular-nums; }
 
 /* ---------- Reset & Base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b; }
+body { font-family: var(--font-sans); color: var(--ink); }
 
 /* ---------- Page Layout ---------- */
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
@@ -19,8 +63,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     text-decoration: none; cursor: pointer; border: none;
     transition: all 0.2s ease;
 }
-.btn-primary { background: #002776; color: #fff; }
-.btn-primary:hover { background: #003da5; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,39,118,0.25); }
+.btn-primary { background: var(--navy); color: #fff; }
+.btn-primary:hover { background: var(--navy-700); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255, 107, 0,0.25); }
 .btn-success { background: #009c3b; color: #fff; }
 .btn-success:hover { background: #007a2e; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,156,59,0.25); }
 .btn-danger { background: #ef4444; color: #fff; }
@@ -39,7 +83,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     transition: all 0.2s ease;
 }
 .form-input:hover, .g-input:hover { border-color: #cbd5e1; background: #fff; }
-.form-input:focus, .g-input:focus { outline: none; border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.form-input:focus, .g-input:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-ring); }
 .form-input::placeholder, .g-input::placeholder { color: #94a3b8; }
 textarea.form-input, textarea.g-input { resize: vertical; min-height: 70px; line-height: 1.5; }
 select.form-input, select.g-input {
@@ -48,7 +92,7 @@ select.form-input, select.g-input {
     background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px;
 }
 input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
-.form-checkbox { width: 18px; height: 18px; accent-color: #3b82f6; border-radius: 4px; }
+.form-checkbox { width: 18px; height: 18px; accent-color: var(--accent); border-radius: 4px; }
 
 /* ---------- Form Groups ---------- */
 .form-group { display: flex; flex-direction: column; gap: 6px; }
@@ -102,7 +146,7 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
 }
 .filters-bar input::placeholder { color: #94a3b8; }
 .filters-bar select:hover, .filters-bar input:hover { border-color: #cbd5e1; background: #fff; }
-.filters-bar select:focus, .filters-bar input:focus { outline: none; border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.filters-bar select:focus, .filters-bar input:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-ring); }
 
 /* Filter card variant */
 .filters-card {
@@ -127,7 +171,7 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
     background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
 }
 .filter-group input:hover, .filter-group select:hover { border-color: #cbd5e1; background: #fff; }
-.filter-group input:focus, .filter-group select:focus { outline: none; border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.filter-group input:focus, .filter-group select:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-ring); }
 .filter-actions { display: flex; gap: 8px; align-items: flex-end; padding-bottom: 1px; }
 
 /* ---------- Badges ---------- */
@@ -165,7 +209,7 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
     padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .summary-card.hero {
-    background: linear-gradient(135deg, #002776, #003da5);
+    background: linear-gradient(135deg, var(--navy), var(--navy-700));
     color: #fff; border: none;
 }
 .summary-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
@@ -217,9 +261,9 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
     font-size: 0.82rem; color: #475569; text-decoration: none;
     background: #fff; transition: all 0.15s;
 }
-.pagination a:hover { background: #f8fafc; border-color: #3b82f6; color: #3b82f6; }
+.pagination a:hover { background: #f8fafc; border-color: var(--accent); color: var(--accent); }
 .pagination .current {
-    background: #002776; color: #fff; border-color: #002776; font-weight: 600;
+    background: var(--navy); color: #fff; border-color: var(--navy); font-weight: 600;
 }
 
 /* ---------- Pagination bar (rodapé do card de listagem) ---------- */
@@ -245,8 +289,8 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
     font-size: 0.76rem; color: #475569; text-decoration: none;
     background: #fff; transition: all 0.15s;
 }
-.pagination-pages a:hover { background: #f8fafc; border-color: #3b82f6; color: #3b82f6; }
-.pagination-pages .current { background: #002776; color: #fff; border-color: #002776; font-weight: 600; }
+.pagination-pages a:hover { background: #f8fafc; border-color: var(--accent); color: var(--accent); }
+.pagination-pages .current { background: var(--navy); color: #fff; border-color: var(--navy); font-weight: 600; }
 .pagination-pages .disabled { color: #cbd5e1; cursor: default; }
 .pagination-pages .ellipsis { border: none; background: transparent; color: #94a3b8; min-width: 20px; }
 
@@ -262,7 +306,7 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
     align-items: center; justify-content: center; color: #64748b;
     transition: all 0.15s; cursor: pointer !important; padding: 0;
 }
-.chan-icon:hover { border-color: #002776; color: #002776; background: #eef4ff; }
+.chan-icon:hover { border-color: var(--navy); color: var(--navy); background: #eef4ff; }
 .chan-icon svg { width: 14px; height: 14px; }
 .prio-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; cursor: help; }
 .obs-btn svg { width: 14px; height: 14px; }
@@ -314,7 +358,7 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
     padding: 60px 0; color: #94a3b8; font-size: 0.85rem;
 }
 .form-modal-loading .spinner {
-    width: 18px; height: 18px; border: 2px solid #e2e8f0; border-top-color: #002776;
+    width: 18px; height: 18px; border: 2px solid #e2e8f0; border-top-color: var(--navy);
     border-radius: 50%; animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -328,9 +372,9 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
 /* ---------- Placar da Semana (Home e Painel Lideranças) ---------- */
 .semana-hero {
     display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
-    background: linear-gradient(120deg, #002776 0%, #0a3d91 60%, #1456b8 100%);
+    background: linear-gradient(120deg, var(--navy) 0%, #0a3d91 60%, #1456b8 100%);
     border-radius: 16px; padding: 20px 30px; margin-bottom: 20px;
-    color: #fff; box-shadow: 0 10px 30px rgba(0,39,118,0.25);
+    color: #fff; box-shadow: 0 10px 30px rgba(255, 107, 0,0.25);
 }
 .semana-titulo {
     font-size: 0.72rem; font-weight: 800; letter-spacing: 1px;
@@ -356,14 +400,14 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
 .onb-banner.onb-visible { display: flex; }
 .onb-banner .onb-text { max-width: 1000px; text-wrap: balance; }
 .onb-close { top: 50%; transform: translateY(-50%); }
-.onb-banner strong { color: #002776; }
+.onb-banner strong { color: var(--navy); }
 .onb-banner .onb-emoji { font-size: 1.3rem; flex-shrink: 0; }
-.onb-banner a { color: #002776; font-weight: 700; }
+.onb-banner a { color: var(--navy); font-weight: 700; }
 .onb-close {
     position: absolute; top: 8px; right: 10px; border: none; background: none;
     font-size: 1.1rem; color: #64748b; cursor: pointer; padding: 2px 6px; border-radius: 6px;
 }
-.onb-close:hover { background: #dbeafe; color: #002776; }
+.onb-close:hover { background: #dbeafe; color: var(--navy); }
 .learn-toast {
     position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 20px);
     background: #0f172a; color: #fff; padding: 13px 22px; border-radius: 12px;
@@ -394,18 +438,76 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
    para não duplicar o balão. */
 [data-tip] { cursor: help; }
 
-/* ---------- Seções Permitidas Grid ---------- */
-.secoes-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0 20px; }
-.secoes-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
-.secoes-group label {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 0.82rem; color: #475569; cursor: pointer;
-    padding: 5px 10px; border-radius: 8px; transition: background 0.15s;
+/* ---------- Separador de zona do formulário (eyebrow) ---------- */
+.form-section-sep {
+    grid-column: 1 / -1;
+    margin: 10px 0 -4px; padding-top: 24px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--faint);
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
 }
-.secoes-group label:hover { background: #f1f5f9; }
-.secoes-group label.secao-pai { font-weight: 600; color: #1e293b; }
-.secoes-group label.secao-filho { padding-left: 28px; font-weight: 400; color: #64748b; font-size: 0.78rem; }
-.secoes-group input[type="checkbox"] { accent-color: #3b82f6; }
+.form-section-sep span {
+    font-weight: 400; letter-spacing: 0; text-transform: none;
+    font-size: 0.75rem; color: #b4bccd;
+}
+.form-grid > .form-section-sep:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+
+/* ---------- Acesso às seções: lista de acesso (uma linha por seção) ---------- */
+/* Cada seção é uma linha alinhada: nome à esquerda (rail fixo), sub-páginas em
+   chips à direita. Linha liberada acende com um trilho laranja — a assinatura do
+   painel: dá pra escanear de relance o que a pessoa pode abrir. */
+.secoes-list { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #fff; }
+.secoes-group {
+    display: flex; align-items: flex-start; gap: 18px;
+    padding: 11px 16px 11px 15px;
+    border-bottom: 1px solid var(--line-soft);
+    border-left: 3px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+}
+.secoes-group:last-child { border-bottom: none; }
+.secoes-group:hover { background: #fbfcfe; }
+/* Linha liberada: trilho laranja + tom quente (a assinatura) */
+.secoes-group:has(> .secao-pai input:checked) { border-left-color: var(--navy); background: #fff8f2; }
+
+.secao-pai {
+    flex: 0 0 186px; display: flex; align-items: center; gap: 9px;
+    margin: 0; padding: 3px 0; cursor: pointer;
+    font-size: 0.9rem; font-weight: 600; color: var(--ink);
+}
+.secao-pai input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--navy); cursor: pointer; flex-shrink: 0; }
+
+.secao-filhos { flex: 1; display: flex; flex-wrap: wrap; gap: 7px; min-width: 0; }
+.secao-filho {
+    display: inline-flex; align-items: center; gap: 6px; margin: 0;
+    padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px;
+    background: #f8fafc; font-size: 0.76rem; font-weight: 400; color: #64748b;
+    cursor: pointer; white-space: nowrap; transition: all 0.12s;
+}
+.secao-filho:hover { border-color: #cbd5e1; color: var(--ink); background: #fff; }
+.secao-filho input[type="checkbox"] { width: 13px; height: 13px; accent-color: var(--navy); cursor: pointer; }
+.secao-filho:has(input:checked) { border-color: var(--navy); background: #fff; color: var(--ouro); font-weight: 600; }
+/* Seção inteira liberada → filhos leem como "incluídos" (sem exigir marcar um a um) */
+.secoes-group:has(> .secao-pai input:checked) .secao-filho { border-color: #fed7aa; background: #fff; color: var(--ouro); }
+
+/* ---------- Aviso de permissão (dinâmico) ---------- */
+.perm-hint { margin-top: 10px; font-size: 0.78rem; color: #64748b; }
+.perm-hint-all { background: #fff3ea; border: 1px solid #fed7aa; color: #b45309; border-radius: 8px; padding: 8px 12px; }
+.perm-hint-warn { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 8px; padding: 8px 12px; }
+
+/* ---------- Áreas de tarefas: chips selecionáveis ---------- */
+.area-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.area-chips label {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 16px; border: 1.5px solid var(--line); border-radius: 999px;
+    background: #f8fafc; font-size: 0.82rem; color: #475569;
+    cursor: pointer; user-select: none; transition: all 0.15s;
+}
+.area-chips label:hover { border-color: var(--navy); color: var(--ink); }
+.area-chips input[type="checkbox"] { accent-color: var(--navy); width: 15px; height: 15px; }
+.area-chips label:has(input:checked) {
+    border-color: var(--navy); background: #fff3ea; color: var(--ouro); font-weight: 600;
+}
 
 /* ---------- Checkbox items (participantes style) ---------- */
 .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
@@ -415,8 +517,8 @@ input[type="date"].form-input, input[type="date"].g-input { color: #475569; }
     transition: all 0.15s; background: #f8fafc; font-size: 0.82rem; color: #475569;
 }
 .check-item:hover { border-color: #cbd5e1; background: #fff; }
-.check-item input[type="checkbox"] { accent-color: #3b82f6; width: 16px; height: 16px; }
-.check-item.checked { border-color: #3b82f6; background: #eff6ff; color: #1e40af; }
+.check-item input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+.check-item.checked { border-color: var(--accent); background: #eff6ff; color: #1e40af; }
 
 /* ---------- Empty State ---------- */
 .empty-state {

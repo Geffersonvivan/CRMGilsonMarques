@@ -78,6 +78,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'liderancas.context_processors.leads_pendentes',
+                'core.context_processors.campanha',
             ],
         },
     },
@@ -167,7 +168,7 @@ REST_FRAMEWORK = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'crm-sorgatto',
+        'LOCATION': 'crm-isadora',
         'TIMEOUT': 300,
         'OPTIONS': {'MAX_ENTRIES': 2000},
     },
@@ -182,3 +183,20 @@ WHISPER_BASE_URL = os.environ.get('WHISPER_BASE_URL', 'https://api.openai.com/v1
 # Usada para corrigir/organizar o campo Observações (no PWA e na gestão das planilhas).
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 IA_LIMPEZA_MODEL = os.environ.get('IA_LIMPEZA_MODEL', 'claude-haiku-4-5')
+
+# ---- Identidade da campanha (fonte única de branding) ----
+# Toda referência a candidato/partido/número/cargo deve vir daqui (via o context
+# processor `core.context_processors.campanha` nos templates, ou settings.CAMPANHA
+# no código). Não hardcodar nome/partido/número espalhado pelo projeto.
+CAMPANHA = {
+    'CANDIDATO_NOME': os.environ.get('CAMPANHA_CANDIDATO_NOME', 'Isadora Piana'),
+    'CANDIDATO_PRIMEIRO_NOME': os.environ.get('CAMPANHA_CANDIDATO_PRIMEIRO_NOME', 'Isadora'),
+    'PARTIDO_SIGLA': os.environ.get('CAMPANHA_PARTIDO_SIGLA', 'NOVO'),
+    'PARTIDO_NUMERO': os.environ.get('CAMPANHA_PARTIDO_NUMERO', '30'),
+    'CARGO_2026': os.environ.get('CAMPANHA_CARGO_2026', 'Deputada Estadual'),
+    'UF': os.environ.get('CAMPANHA_UF', 'Santa Catarina'),
+    # Base eleitoral de referência no mapa (votação do candidato em eleição anterior)
+    'TSE_TERMO_BUSCA': os.environ.get('CAMPANHA_TSE_TERMO_BUSCA', 'ISADORA'),
+    'TSE_CARGO_BASE': os.environ.get('CAMPANHA_TSE_CARGO_BASE', 'deputado_estadual'),
+    'TSE_ANO_BASE': int(os.environ.get('CAMPANHA_TSE_ANO_BASE', '2022')),
+}

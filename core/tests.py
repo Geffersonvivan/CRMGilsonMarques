@@ -41,29 +41,50 @@ STORAGES_TESTE = {
     'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
 }
 
-class ConfigIsadoraTests(SimpleTestCase):
-    def test_config_carregada_de_configs_slug(self):
+CHAVES_OBRIGATORIAS = {
+    'CANDIDATO_NOME', 'CANDIDATO_PRIMEIRO_NOME', 'CANDIDATO_ARTIGO',
+    'PARTIDO_SIGLA', 'PARTIDO_NUMERO', 'UF', 'CARGO_2026', 'TSE_CARGO_2026',
+    'TSE_TERMO_BUSCA', 'TSE_CARGO_BASE', 'TSE_CARGO_BASE_LABEL',
+    'TSE_ANO_BASE', 'CORES', 'COLUNAS_LIDERANCA',
+}
+
+
+def _todas_as_configs():
+    """Itera (slug, CAMPANHA) de todos os configs/<slug>.py do pacote."""
+    import importlib
+    import pkgutil
+
+    import configs
+    for mod in pkgutil.iter_modules(configs.__path__):
+        yield mod.name, importlib.import_module(f'configs.{mod.name}').CAMPANHA
+
+
+class ConfigsDeMarcaTests(SimpleTestCase):
+    """Valida TODAS as configs do pacote — uma marca nova com chave faltando
+    ou coluna inexistente quebra aqui, não em produção."""
+
+    def test_config_ativa_carregada_de_configs_slug(self):
         # settings.CAMPANHA vem de configs/<MARCA>.py, não de env de branding
-        import configs.isadora
-        self.assertEqual(settings.CAMPANHA, configs.isadora.CAMPANHA)
+        import importlib
+        mod = importlib.import_module(f'configs.{settings.MARCA}')
+        self.assertEqual(settings.CAMPANHA, mod.CAMPANHA)
 
-    def test_chaves_obrigatorias_presentes(self):
-        obrigatorias = {
-            'CANDIDATO_NOME', 'CANDIDATO_PRIMEIRO_NOME', 'CANDIDATO_ARTIGO',
-            'PARTIDO_SIGLA', 'PARTIDO_NUMERO', 'UF', 'CARGO_2026', 'TSE_CARGO_2026',
-            'TSE_TERMO_BUSCA', 'TSE_CARGO_BASE', 'TSE_CARGO_BASE_LABEL',
-            'TSE_ANO_BASE', 'CORES', 'COLUNAS_LIDERANCA',
-        }
-        self.assertTrue(obrigatorias.issubset(settings.CAMPANHA.keys()),
-                        obrigatorias - set(settings.CAMPANHA.keys()))
+    def test_chaves_obrigatorias_em_todas_as_marcas(self):
+        for slug, c in _todas_as_configs():
+            faltando = CHAVES_OBRIGATORIAS - set(c.keys())
+            self.assertEqual(faltando, set(), f'configs/{slug}.py sem chaves: {faltando}')
+            self.assertIn(c['CANDIDATO_ARTIGO'], ('a', 'o'), slug)
+            self.assertIn(c['TSE_CARGO_2026'],
+                          ('deputado_estadual', 'deputado_federal'), slug)
 
-    def test_colunas_lideranca_sao_campos_reais_do_model(self):
+    def test_colunas_lideranca_sao_campos_reais_em_todas_as_marcas(self):
         # a lista da config referencia campos existentes (Fase 2); a única
         # chave virtual permitida é a annotation ultima_interacao da view
         from liderancas.models import Lideranca
         campos = {f.name for f in Lideranca._meta.get_fields()} | {'ultima_interacao'}
-        sobras = set(settings.CAMPANHA['COLUNAS_LIDERANCA']) - campos
-        self.assertEqual(sobras, set())
+        for slug, c in _todas_as_configs():
+            sobras = set(c['COLUNAS_LIDERANCA']) - campos
+            self.assertEqual(sobras, set(), f'configs/{slug}.py: colunas inexistentes')
 
 
 class ContextProcessorGramaticaTests(SimpleTestCase):

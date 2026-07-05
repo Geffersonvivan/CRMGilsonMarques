@@ -3,8 +3,8 @@
 {% block extra_css %}
 <style>
     .actions { display: flex; gap: 4px; }
-    .obs-link { color: #FF6B00; cursor: pointer; text-decoration: underline dotted; }
-    .obs-link:hover { color: #E25E00; }
+    .obs-link { color: var(--navy); cursor: pointer; text-decoration: underline dotted; }
+    .obs-link:hover { color: var(--navy-700); }
     .pagination-info { text-align: center; font-size: 0.78rem; color: #64748b; padding-bottom: 12px; }
     .pagination .disabled { color: #cbd5e1; cursor: default; }
     .pagination .disabled:hover { background: transparent; border-color: #e2e8f0; }
@@ -139,6 +139,7 @@
                 <td><span class="badge badge-status-{{ e.status }}">{{ e.get_status_display }}</span></td>
                 <td>
                     <span class="obs-link" onclick="openDetalhes(this)"
+                        data-id="{{ e.pk }}"
                         data-nome="{{ e.nome|escapejs }}"
                         data-tipo="{{ e.get_tipo_display }}"
                         data-data="{{ e.data|date:'d/m/Y' }}"
@@ -223,6 +224,11 @@
                 <span class="detail-label">Resultado / Avaliação</span>
                 <div class="detail-text" id="dResultado"></div>
             </div>
+            <div id="dAnexosSection" class="detail-section" style="display:none;">
+                <span class="detail-label">Anexos</span>
+                <div id="dAnexosGaleria" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+                <div id="dAnexosArquivos" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -255,7 +261,40 @@ function openDetalhes(el) {
     if (d.resultado) { document.getElementById('dResultado').textContent = d.resultado; resSection.style.display = 'block'; }
     else { resSection.style.display = 'none'; }
 
+    carregarAnexos(d.id);
+
     document.getElementById('detalhesModal').classList.add('active');
+}
+function carregarAnexos(id) {
+    const sec = document.getElementById('dAnexosSection');
+    const gal = document.getElementById('dAnexosGaleria');
+    const arq = document.getElementById('dAnexosArquivos');
+    gal.innerHTML = ''; arq.innerHTML = ''; sec.style.display = 'none';
+    if (!id) return;
+    fetch(`/agenda/api/eventos/${id}/`)
+        .then(r => r.json())
+        .then(data => {
+            const anexos = data.anexos || [];
+            if (!anexos.length) return;
+            anexos.forEach(a => {
+                if (a.is_imagem) {
+                    const link = document.createElement('a');
+                    link.href = a.url; link.target = '_blank'; link.rel = 'noopener';
+                    const im = document.createElement('img');
+                    im.src = a.url; im.alt = a.nome;
+                    im.style.cssText = 'width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;';
+                    link.appendChild(im); gal.appendChild(link);
+                } else {
+                    const link = document.createElement('a');
+                    link.href = a.url; link.target = '_blank'; link.rel = 'noopener';
+                    link.textContent = '📄 ' + a.nome;
+                    link.style.cssText = 'font-size:.85rem;color:var(--navy);';
+                    arq.appendChild(link);
+                }
+            });
+            sec.style.display = 'block';
+        })
+        .catch(() => {});
 }
 function closeDetalhes() {
     document.getElementById('detalhesModal').classList.remove('active');

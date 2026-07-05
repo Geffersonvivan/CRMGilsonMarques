@@ -17,12 +17,12 @@
     .header-actions .btn:active { transform: scale(.98); }
     .toggle-group { display: flex; gap: 2px; padding: 2px; height: 34px; border: 1px solid #e6e9f0; border-radius: 9px; background: #f1f4f9; }
     .toggle-group .btn { height: auto; border-radius: 7px; padding: 0 13px; background: transparent; color: #64748b; font-weight: 600; box-shadow: none; }
-    .toggle-group .btn:hover { color: #FF6B00; }
-    .toggle-group .btn.active { background: #FF6B00; color: #fff; box-shadow: 0 2px 6px -2px rgba(255, 107, 0,.5); }
+    .toggle-group .btn:hover { color: var(--navy); }
+    .toggle-group .btn.active { background: var(--navy); color: #fff; box-shadow: 0 2px 6px -2px rgba(255, 107, 0,.5); }
     .header-actions .btn-outline { border: 1px solid #e3e8f1; background: #fff; color: #475569; }
-    .header-actions .btn-outline:hover { border-color: #FF6B00; color: #FF6B00; }
-    .header-actions .btn-primary { background: #FF6B00; color: #fff; box-shadow: 0 5px 12px -7px rgba(255, 107, 0,.9); }
-    .header-actions .btn-primary:hover { background: #E25E00; }
+    .header-actions .btn-outline:hover { border-color: var(--navy); color: var(--navy); }
+    .header-actions .btn-primary { background: var(--navy); color: #fff; box-shadow: 0 5px 12px -7px rgba(255, 107, 0,.9); }
+    .header-actions .btn-primary:hover { background: var(--navy-700); }
     .header-actions .btn-whatsapp { box-shadow: 0 5px 12px -7px rgba(37,211,102,.8); }
     .novo-wrap { position: relative; }
     .novo-wrap .caret { width: 11px; height: 11px; opacity: .85; margin-left: -1px; }
@@ -403,7 +403,7 @@
     .contato-item { font-size: 0.72rem; color: #374151; padding: 1px 0; }
     .contato-item-check { display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 4px; padding: 2px 4px; }
     .contato-item-check:hover { background: #eef4ff; }
-    .contato-item-check input { accent-color: #FF6B00; cursor: pointer; }
+    .contato-item-check input { accent-color: var(--navy); cursor: pointer; }
     .contatos-hint { font-weight: 400; color: #94a3b8; font-size: 0.66rem; }
     .contato-item-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .sug-badge { font-size: 0.62rem; font-weight: 700; padding: 1px 7px; border-radius: 9px; flex-shrink: 0; }
@@ -636,8 +636,8 @@
 <div class="calendar-container" id="calendar-view">
     <div class="cal-legend">
         <span class="cl-t">Legenda</span>
-        <span class="cal-leg"><i style="background:#FF6B00"></i> Compromisso</span>
-        <span class="cal-leg"><i style="background:#C44B00"></i> Evento</span>
+        <span class="cal-leg"><i style="background:var(--navy)"></i> Compromisso</span>
+        <span class="cal-leg"><i style="background:var(--ouro)"></i> Evento</span>
         <span class="cal-leg"><i style="background:#7c3aed"></i> Roteiro</span>
         <span class="cal-leg"><i style="background:#0d9488"></i> Tarefa</span>
         <span class="cal-leg"><i style="background:#ef4444"></i> Tarefa atrasada</span>
@@ -789,11 +789,11 @@
     .day-menu button { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
         background: none; border: none; padding: 10px; border-radius: 9px; font-size: .88rem; font-weight: 600;
         color: #1e293b; cursor: pointer; transition: background .12s, color .12s; }
-    .day-menu button:hover { background: #eef3fb; color: #FF6B00; }
+    .day-menu button:hover { background: #eef3fb; color: var(--navy); }
     .day-menu button .dm-ico { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center;
         justify-content: center; flex-shrink: 0; }
     .day-menu button .dm-ico svg { width: 16px; height: 16px; }
-    .day-menu .dm-comp .dm-ico { background: #e9f0ff; color: #FF6B00; }
+    .day-menu .dm-comp .dm-ico { background: #e9f0ff; color: var(--navy); }
     .day-menu .dm-rot  .dm-ico { background: #f3edfd; color: #7c3aed; }
     .day-menu .dm-evt  .dm-ico { background: #fdf3d6; color: #b8860b; }
     .day-menu .dm-tar  .dm-ico { background: #e6f6f1; color: #0d9488; }
@@ -2337,6 +2337,7 @@ function salvarRoteiro() {
             badge.textContent = 'Salvo!';
             badge.style.background = '#f0fdf4';
             badge.style.color = '#16a34a';
+            if (calendar) calendar.refetchEvents();  // chip do roteiro aparece na hora
         } else {
             badge.textContent = data.error || 'Erro ao salvar';
             badge.style.background = '#fef2f2';

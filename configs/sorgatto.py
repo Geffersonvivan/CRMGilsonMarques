@@ -4,12 +4,13 @@ Caso de cargo cruzado: base histórica de 2022 como deputado FEDERAL,
 disputa de 2026 como deputado ESTADUAL — o mapa e o ranking de ameaça
 lidam com isso via TSE_CARGO_BASE ≠ TSE_CARGO_2026 (Fase 2 passo 3).
 
-A CONFIRMAR com a campanha: nome completo/urna exato no TSE 2022 e a
-paleta oficial (abaixo, azul/amarelo institucionais do PL).
+Nome de urna confirmado nos dados do TSE 2022 ('SORGATTO', dep. federal) e
+nome completo no branding da produção anterior. A CONFIRMAR: paleta oficial
+da campanha (abaixo, azul/amarelo institucionais do PL).
 """
 
 CAMPANHA = {
-    'CANDIDATO_NOME': 'Sorgatto',
+    'CANDIDATO_NOME': 'Leandro Sorgatto',
     'CANDIDATO_PRIMEIRO_NOME': 'Sorgatto',
     'CANDIDATO_ARTIGO': 'o',
     'PARTIDO_SIGLA': 'PL',

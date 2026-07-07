@@ -1022,14 +1022,26 @@ function initModalForm() {
         });
     }
 
-    // Pre-fill date from dateClick param
+    // Pre-fill a partir do clique no calendário.
+    // Na visão semana/dia (time-grid) o dateStr vem com hora: "2026-07-07T09:00:00".
+    // Um <input type="date"> só aceita "YYYY-MM-DD" — se receber a hora junto, fica
+    // VAZIO. Então separamos: a data alimenta o campo de data e, se houver hora no
+    // clique, ela vira o início (fim = início + 1h). Na visão mês (sem hora) cai no 09h.
     if (window._prefillDate) {
+        const raw = String(window._prefillDate);
+        const datePart = raw.slice(0, 10);
+        const timeMatch = raw.match(/T(\d{2}:\d{2})/);
         const dataField = form.querySelector('[name="data"]');
         const hiField = form.querySelector('[name="hora_inicio"]');
         const hfField = form.querySelector('[name="hora_fim"]');
-        if (dataField && !dataField.value) dataField.value = window._prefillDate;
-        if (hiField && !hiField.value) hiField.value = '09:00';
-        if (hfField && !hfField.value) hfField.value = '10:00';
+        if (dataField && !dataField.value) dataField.value = datePart;
+        const ini = timeMatch ? timeMatch[1] : '09:00';
+        if (hiField && !hiField.value) hiField.value = ini;
+        if (hfField && !hfField.value) {
+            const p = ini.split(':');
+            const fim = ((parseInt(p[0], 10) + 1) % 24);
+            hfField.value = String(fim).padStart(2, '0') + ':' + p[1];
+        }
         window._prefillDate = null;
     }
 
@@ -1120,13 +1132,16 @@ function setupTimeCombo(input, getRefMinutes) {
         menu.style.top = (r.bottom + 2) + 'px';
         menu.style.minWidth = r.width + 'px';
     }
-    function render() {
+    function render(useFilter) {
         const cur = tcParse(input.value);
         const q = input.value.trim().replace(/[^0-9]/g, '');
         const all = [];
         for (let m = 0; m < 24 * 60; m += 15) all.push(m);
         let list = all;
-        if (q) {
+        // Só filtra quando o usuário está DIGITANDO. Ao abrir (foco/clique) mostra
+        // a lista completa rolada até a hora atual — senão um campo já preenchido
+        // com "09:00" filtraria a si mesmo e exibiria só uma opção.
+        if (useFilter && q) {
             list = all.filter(m => tcFmt(m).replace(':', '').startsWith(q));
             if (!list.length) list = all;
         }
@@ -1143,7 +1158,7 @@ function setupTimeCombo(input, getRefMinutes) {
         const sel = menu.querySelector('.tc-opt.sel');
         menu.scrollTop = sel ? Math.max(0, sel.offsetTop - 80) : 0;
     }
-    function open() { position(); render(); menu.hidden = false; }
+    function open() { position(); render(false); menu.hidden = false; }
     function close() { menu.hidden = true; }
     function choose(m) { input.value = tcFmt(m); close(); input.dispatchEvent(new Event('change', { bubbles: true })); }
     function hl() {
@@ -1154,7 +1169,7 @@ function setupTimeCombo(input, getRefMinutes) {
 
     input.addEventListener('focus', open);
     input.addEventListener('click', open);
-    input.addEventListener('input', () => { if (menu.hidden) { position(); menu.hidden = false; } render(); });
+    input.addEventListener('input', () => { if (menu.hidden) { position(); menu.hidden = false; } render(true); });
     input.addEventListener('keydown', e => {
         if (menu.hidden && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { open(); return; }
         if (e.key === 'ArrowDown') { e.preventDefault(); active = Math.min(active + 1, opts.length - 1); hl(); }
@@ -1967,12 +1982,15 @@ function openDayMenu(dateStr, jsEvent) {
 }
 function closeDayMenu() { var m = document.getElementById('dayMenu'); if (m) m.classList.remove('open'); }
 function dayMenuPick(kind) {
-    var date = _dayMenuDate;
+    var raw = _dayMenuDate || '';
+    var dia = raw.slice(0, 10);   // só a data (YYYY-MM-DD) p/ campos date puros
     closeDayMenu();
-    if (kind === 'compromisso') openCreate(date);
-    else if (kind === 'roteiro') openRoteiroModal(date);
-    else if (kind === 'evento') loadEventoFormModal('{% url "agenda:evento_create" %}?data=' + date, 'Novo Evento');
-    else if (kind === 'tarefa') loadTarefaFormModal('{% url "tarefas:tarefa_create" %}?prazo=' + date, 'Nova Tarefa');
+    // Compromisso recebe a string completa (pode ter a hora do slot clicado na semana);
+    // os demais recebem só a data — seus campos são <input type="date">/prazo.
+    if (kind === 'compromisso') openCreate(raw);
+    else if (kind === 'roteiro') openRoteiroModal(dia);
+    else if (kind === 'evento') loadEventoFormModal('{% url "agenda:evento_create" %}?data=' + dia, 'Novo Evento');
+    else if (kind === 'tarefa') loadTarefaFormModal('{% url "tarefas:tarefa_create" %}?prazo=' + dia, 'Nova Tarefa');
 }
 
 // ---- Tarefa em modal (criar) ----
@@ -2008,7 +2026,8 @@ function initTarefaModalForm() {
 }
 
 // ---- Evento em modal (criar/editar) ----
-function loadEventoFormModal(url, title) {
+function loadEventoFormModal(url, title, dia) {
+    window._prefillEventoDate = dia || null;
     openModal(title);
     fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
@@ -2018,6 +2037,10 @@ function loadEventoFormModal(url, title) {
 function initEventoModalForm() {
     var form = document.getElementById('evento-modal-form');
     if (!form) return;
+    // Prefill do dia clicado no calendário
+    var dataEv = form.querySelector('[name="data"]');
+    if (dataEv && !dataEv.value && window._prefillEventoDate) dataEv.value = window._prefillEventoDate;
+    window._prefillEventoDate = null;
     var reg = form.querySelector('#id_regiao'), cid = form.querySelector('#id_cidade');
     if (reg && cid) reg.addEventListener('change', function () {
         var rid = reg.value;
@@ -2048,6 +2071,8 @@ function toggleNovoMenu(ev) {
     ev.stopPropagation();
     var m = document.getElementById('novoMenu');
     if (m.classList.contains('open')) { closeNovoMenu(); return; }
+    // "＋ Novo" do topo = hoje (não herda o último dia clicado no calendário)
+    _dayMenuDate = null;
     closeDayMenu();
     var r = document.getElementById('novoBtn').getBoundingClientRect();
     m.classList.add('open');
@@ -2060,9 +2085,12 @@ function novoPick(kind) {
     closeNovoMenu();
     var d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     var today = d.toISOString().slice(0, 10);
-    if (kind === 'compromisso') openCreate();
-    else if (kind === 'roteiro') openRoteiroModal(today);
-    else if (kind === 'evento') loadEventoFormModal('{% url "agenda:evento_create" %}', 'Novo Evento');
+    // Se veio de um clique no calendário, usa o dia clicado; senão, hoje.
+    var dia = _dayMenuDate || today;
+    _dayMenuDate = null;   // consome o dia — próxima abertura não herda
+    if (kind === 'compromisso') openCreate(dia);
+    else if (kind === 'roteiro') openRoteiroModal(dia);
+    else if (kind === 'evento') loadEventoFormModal('{% url "agenda:evento_create" %}', 'Novo Evento', dia);
     else if (kind === 'tarefa') loadTarefaFormModal('{% url "tarefas:tarefa_create" %}', 'Nova Tarefa');
 }
 document.addEventListener('click', function (e) {

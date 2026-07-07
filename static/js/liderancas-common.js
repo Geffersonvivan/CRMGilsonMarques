@@ -110,7 +110,12 @@
             '.rcd.open .rcd-list{display:block;}' +
             '.rcd-opt{padding:8px 12px;border-radius:8px;font-size:0.85rem;color:#1e293b;cursor:pointer;line-height:1.35;}' +
             '.rcd-opt:hover,.rcd-opt.active{background:var(--accent-ring);}' +
-            ".rcd-opt[aria-selected='true']{font-weight:600;color:var(--accent);}";
+            ".rcd-opt[aria-selected='true']{font-weight:600;color:var(--accent);}" +
+            '.rcd-search{position:sticky;top:0;z-index:1;box-sizing:border-box;width:100%;' +
+            'margin-bottom:4px;padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;' +
+            'font-size:0.85rem;background:#fff;}' +
+            '.rcd-search:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);}' +
+            '.rcd-empty{padding:8px 12px;font-size:0.82rem;color:#94a3b8;}';
         document.head.appendChild(st);
     }
 
@@ -133,6 +138,15 @@
         var list = document.createElement('div');
         list.className = 'rcd-list';
         list.setAttribute('role', 'listbox');
+
+        // Caixa de busca (filtra as regiões por digitação, sem acento/maiúscula)
+        var search = document.createElement('input');
+        search.type = 'text';
+        search.className = 'rcd-search';
+        search.setAttribute('placeholder', 'Buscar região…');
+        search.setAttribute('autocomplete', 'off');
+        list.appendChild(search);
+        function _norm(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
 
         function syncLabel() {
             var opt = select.options[select.selectedIndex];
@@ -171,20 +185,44 @@
             });
         }
 
-        var activeIdx = -1;
-        function setActive(i) {
-            if (!rows.length) return;
-            activeIdx = (i + rows.length) % rows.length;
-            rows.forEach(function (r, k) { r.classList.toggle('active', k === activeIdx); });
-            rows[activeIdx].scrollIntoView({ block: 'nearest' });
+        var emptyMsg = document.createElement('div');
+        emptyMsg.className = 'rcd-empty';
+        emptyMsg.textContent = 'Nenhuma região encontrada';
+        emptyMsg.style.display = 'none';
+        list.appendChild(emptyMsg);
+
+        var activeRow = null;
+        function visibleRows() { return rows.filter(function (r) { return r.style.display !== 'none'; }); }
+        function setActiveRow(r) {
+            if (activeRow) activeRow.classList.remove('active');
+            activeRow = r || null;
+            if (activeRow) { activeRow.classList.add('active'); activeRow.scrollIntoView({ block: 'nearest' }); }
+        }
+        function move(delta) {
+            var vis = visibleRows();
+            if (!vis.length) { setActiveRow(null); return; }
+            var cur = vis.indexOf(activeRow);
+            var next = cur < 0 ? (delta > 0 ? 0 : vis.length - 1) : (cur + delta + vis.length) % vis.length;
+            setActiveRow(vis[next]);
+        }
+        function applyFilter(term) {
+            var t = _norm(term);
+            rows.forEach(function (r) {
+                r.style.display = (!t || _norm(r.textContent).indexOf(t) !== -1) ? '' : 'none';
+            });
+            var vis = visibleRows();
+            emptyMsg.style.display = vis.length ? 'none' : '';
+            setActiveRow(vis.length ? vis[0] : null);
         }
         function open() {
             document.querySelectorAll('.rcd.open').forEach(function (w) { if (w !== wrap) w.classList.remove('open'); });
             wrap.classList.add('open');
             btn.setAttribute('aria-expanded', 'true');
-            var sel = -1;
-            rows.forEach(function (r, k) { if (r.dataset.value === select.value) sel = k; });
-            setActive(sel >= 0 ? sel : 0);
+            search.value = '';
+            applyFilter('');
+            var selRow = rows.filter(function (r) { return r.dataset.value === select.value; })[0];
+            if (selRow) setActiveRow(selRow);
+            search.focus();
         }
         function close() {
             wrap.classList.remove('open');
@@ -196,10 +234,16 @@
         });
         btn.addEventListener('keydown', function (e) {
             var isOpen = wrap.classList.contains('open');
-            if (e.key === 'ArrowDown') { e.preventDefault(); isOpen ? setActive(activeIdx + 1) : open(); }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); isOpen ? setActive(activeIdx - 1) : open(); }
-            else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (isOpen && rows[activeIdx]) rows[activeIdx].click(); else open(); }
+            if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!isOpen) open(); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); if (!isOpen) open(); }
             else if (e.key === 'Escape') { close(); }
+        });
+        search.addEventListener('input', function () { applyFilter(search.value); });
+        search.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+            else if (e.key === 'Enter') { e.preventDefault(); if (activeRow) activeRow.click(); }
+            else if (e.key === 'Escape') { e.preventDefault(); close(); btn.focus(); }
         });
 
         select.style.display = 'none';
